@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -lah /d/Ethereal/\"Task Tracker\"/task_manager/app/models/*.py)",
+      "Bash(cd \"/d/Ethereal/Task Tracker/task_manager\" && python -m pytest tests/ -v --tb=short 2>&1)"
+    ]
+  }
+}

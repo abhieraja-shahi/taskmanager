@@ -1,0 +1,33 @@
+{
+  "event": "ticket.create",
+  "ticket": {
+    "id": 42,
+    "number": "10042",
+    "title": "Cannot log into the banking portal",
+    "state": { "name": "new" },
+    "priority": { "name": "2 normal" },
+    "group": { "name": "Development" },
+    "customer_id": 7,
+    "customer_email": "rajesh.kumar@example.com",
+    "customer": {
+      "id": 7,
+      "firstname": "Rajesh",
+      "lastname": "Kumar",
+      "email": "rajesh.kumar@example.com"
+    },
+    "owner_id": null,
+    "owner": {},
+    "tags": ["login", "portal"],
+    "created_at": "2026-03-17T10:30:00Z",
+    "updated_at": "2026-03-17T10:30:00Z"
+  },
+  "article": {
+    "id": 101,
+    "subject": "Cannot log into the banking portal",
+    "body": "Hi,\n\nI am unable to log into my account since yesterday morning.\nIt shows 'Invalid credentials' even though I reset my password.\n\nPlease help urgently.\n\nRegards,\nRajesh",
+    "content_type": "text/plain",
+    "sender": "Customer",
+    "from": "rajesh.kumar@example.com",
+    "created_at": "2026-03-17T10:30:00Z"
+  }
+}
