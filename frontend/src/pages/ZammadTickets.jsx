@@ -138,12 +138,12 @@ export default function ZammadTickets() {
 
   const handleResolve = async (e, ticketId) => {
     e.stopPropagation()
-    if (!window.confirm('Mark this ticket as resolved in Zammad?')) return
+    if (!window.confirm('Mark this ticket as closed in Zammad?')) return
     setResolving(ticketId)
     try {
       await resolveZammadTicket(ticketId)
       setTickets((prev) =>
-        prev.map((t) => t.ticket_id === ticketId ? { ...t, state: 'resolved' } : t)
+        prev.map((t) => t.ticket_id === ticketId ? { ...t, state: 'Closed' } : t)
       )
     } catch (err) {
       alert(err?.response?.data?.detail || 'Failed to resolve ticket.')
@@ -253,7 +253,7 @@ export default function ZammadTickets() {
                             disabled={resolving === t.ticket_id}
                             onClick={(e) => handleResolve(e, t.ticket_id)}
                           >
-                            {resolving === t.ticket_id ? '…' : 'Resolve'}
+                            {resolving === t.ticket_id ? '…' : 'Close'}
                           </button>
                         )}
                       </div>

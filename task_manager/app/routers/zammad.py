@@ -85,7 +85,7 @@ async def resolve_zammad_ticket(
     async with httpx.AsyncClient(follow_redirects=True, verify=False) as client:
         response = await client.put(
             f"{settings.ZAMMAD_BASE_URL}/api/v1/tickets/{ticket_id}",
-            json={"state": "Resolved"},
+            json={"state": "Closed"},
             headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
             timeout=10.0,
         )
@@ -96,7 +96,7 @@ async def resolve_zammad_ticket(
             detail=f"Zammad API error: {response.status_code} {response.text[:200]}",
         )
 
-    ticket.state = "resolved"
+    ticket.state = "Closed"
     ticket.resolved_by_id = current_user.id
     ticket.resolved_at = datetime.now(timezone.utc)
     await db.commit()
