@@ -11,7 +11,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, require_admin, require_manager
 from app.models.user import User
 from app.models.user import UserRole
-from app.schemas.user import LoginRequest, TokenResponse, UserBriefResponse, UserCreate, UserResponse, UserRoleUpdate
+from app.schemas.user import ChangePasswordRequest, LoginRequest, TokenResponse, UserBriefResponse, UserCreate, UserResponse, UserRoleUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -113,6 +113,18 @@ async def delete_user(
     if user.role == UserRole.ADMIN.value:
         raise HTTPException(status_code=400, detail="Cannot delete admin accounts")
     user.is_active = False
+    await db.commit()
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    data: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not pwd_context.verify(data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = pwd_context.hash(data.new_password)
     await db.commit()
 
 

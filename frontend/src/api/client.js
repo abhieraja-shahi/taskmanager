@@ -27,6 +27,7 @@ export const updateUserRole = (userId, role) => api.put(`/auth/users/${userId}/r
 export const deleteUser = (userId) => api.delete(`/auth/users/${userId}`)
 export const getUsers = () => api.get('/auth/users')
 export const searchUsers = (q) => api.get('/auth/users/search', { params: { q } })
+export const changePassword = (data) => api.post('/auth/change-password', data)
 
 /* ─── Tasks ─────────────────────────────────────────────────────────── */
 export const getTasks = (params) => api.get('/tasks/', { params })

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getNotifications } from '../api/client'
+import { useToast } from '../contexts/ToastContext'
+import { getNotifications, changePassword } from '../api/client'
+import Modal from './Modal'
 import logo from '../../Logo.png'
 
 const NAV_ICONS = {
@@ -65,9 +67,36 @@ const NAV_ICONS = {
 
 export default function Layout() {
   const { user, isManager, isAdmin, logout } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
   const [unread, setUnread] = useState(0)
+  const [showChangePwd, setShowChangePwd] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' })
+  const [pwdLoading, setPwdLoading] = useState(false)
+
+  const handleChangePwd = async (e) => {
+    e.preventDefault()
+    if (pwdForm.new_password !== pwdForm.confirm_password) {
+      toast.error('New passwords do not match')
+      return
+    }
+    if (pwdForm.new_password.length < 6) {
+      toast.error('New password must be at least 6 characters')
+      return
+    }
+    setPwdLoading(true)
+    try {
+      await changePassword({ current_password: pwdForm.current_password, new_password: pwdForm.new_password })
+      toast.success('Password changed successfully')
+      setShowChangePwd(false)
+      setPwdForm({ current_password: '', new_password: '', confirm_password: '' })
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to change password')
+    } finally {
+      setPwdLoading(false)
+    }
+  }
 
   useEffect(() => {
     getNotifications()
@@ -181,6 +210,12 @@ export default function Layout() {
             <div className="user-name">{user?.username}</div>
             <div className="user-role">{user?.role}</div>
           </div>
+          <button className="logout-btn" onClick={() => setShowChangePwd(true)} title="Change password" style={{ marginRight: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="7" width="8" height="7" rx="1" />
+              <path d="M5.5 7V5a2.5 2.5 0 015 0v2" strokeLinecap="round" />
+            </svg>
+          </button>
           <button className="logout-btn" onClick={handleLogout} title="Sign out">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 8h8M11 5l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
@@ -189,6 +224,52 @@ export default function Layout() {
           </button>
         </div>
       </aside>
+
+      {showChangePwd && (
+        <Modal title="Change Password" onClose={() => { setShowChangePwd(false); setPwdForm({ current_password: '', new_password: '', confirm_password: '' }) }}>
+          <form onSubmit={handleChangePwd} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label">Current Password</label>
+              <input
+                type="password"
+                className="form-input"
+                value={pwdForm.current_password}
+                onChange={(e) => setPwdForm(f => ({ ...f, current_password: e.target.value }))}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">New Password</label>
+              <input
+                type="password"
+                className="form-input"
+                value={pwdForm.new_password}
+                onChange={(e) => setPwdForm(f => ({ ...f, new_password: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirm New Password</label>
+              <input
+                type="password"
+                className="form-input"
+                value={pwdForm.confirm_password}
+                onChange={(e) => setPwdForm(f => ({ ...f, confirm_password: e.target.value }))}
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowChangePwd(false); setPwdForm({ current_password: '', new_password: '', confirm_password: '' }) }}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={pwdLoading}>
+                {pwdLoading ? 'Saving…' : 'Change Password'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* ── Main ── */}
       <div className="main-area dot-grid">
