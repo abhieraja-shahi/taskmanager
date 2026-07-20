@@ -21,3 +21,5 @@ class ZammadTicket(Base):
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)
     synced_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    resolved_by_id = Column(Integer, nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)

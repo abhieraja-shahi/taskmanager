@@ -100,7 +100,8 @@ export const uploadDeploymentScript = (id, file) => {
 export const deleteDeployment = (id) => api.delete(`/deployments/${id}`)
 
 /* ─── Zammad Tickets ─────────────────────────────────────────────────── */
-export const getZammadTickets = (params) => api.get('/zammad/tickets', { params })
-export const getTicketTasks   = (ticketId) => api.get(`/zammad/tickets/${ticketId}/tasks`)
+export const getZammadTickets    = (params)   => api.get('/zammad/tickets', { params })
+export const getTicketTasks      = (ticketId) => api.get(`/zammad/tickets/${ticketId}/tasks`)
+export const resolveZammadTicket = (ticketId) => api.patch(`/zammad/tickets/${ticketId}/resolve`)
 
 export default api

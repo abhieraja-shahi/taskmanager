@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getZammadTickets, getTicketTasks } from '../api/client'
+import { getZammadTickets, getTicketTasks, resolveZammadTicket } from '../api/client'
+import { useAuth } from '../contexts/AuthContext'
 
 const PRIORITY_COLORS = {
   '1 low':      'var(--text-muted)',
@@ -106,12 +107,16 @@ function LinkedTasks({ ticketId }) {
   )
 }
 
+const RESOLVED_STATES = new Set(['resolved', 'closed'])
+
 export default function ZammadTickets() {
   const navigate = useNavigate()
+  const { isManager } = useAuth()
   const [tickets, setTickets]         = useState([])
   const [loading, setLoading]         = useState(true)
   const [stateFilter, setStateFilter] = useState('')
   const [expanded, setExpanded]       = useState(null)
+  const [resolving, setResolving]     = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -130,6 +135,22 @@ export default function ZammadTickets() {
   useEffect(() => { load() }, [load])
 
   const toggleExpand = (id) => setExpanded((prev) => (prev === id ? null : id))
+
+  const handleResolve = async (e, ticketId) => {
+    e.stopPropagation()
+    if (!window.confirm('Mark this ticket as resolved in Zammad?')) return
+    setResolving(ticketId)
+    try {
+      await resolveZammadTicket(ticketId)
+      setTickets((prev) =>
+        prev.map((t) => t.ticket_id === ticketId ? { ...t, state: 'resolved' } : t)
+      )
+    } catch (err) {
+      alert(err?.response?.data?.detail || 'Failed to resolve ticket.')
+    } finally {
+      setResolving(null)
+    }
+  }
 
   return (
     <>
@@ -217,13 +238,25 @@ export default function ZammadTickets() {
                       {formatDate(t.created_at)}
                     </td>
                     <td>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ fontSize: 11, padding: '3px 10px', height: 'auto', whiteSpace: 'nowrap' }}
-                        onClick={(e) => { e.stopPropagation(); navigate(`/tasks/new?ticketId=${t.ticket_id}`) }}
-                      >
-                        + New Task
-                      </button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ fontSize: 11, padding: '3px 10px', height: 'auto', whiteSpace: 'nowrap' }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/tasks/new?ticketId=${t.ticket_id}`) }}
+                        >
+                          + New Task
+                        </button>
+                        {isManager && !RESOLVED_STATES.has((t.state || '').toLowerCase()) && (
+                          <button
+                            className="btn btn-primary"
+                            style={{ fontSize: 11, padding: '3px 10px', height: 'auto', whiteSpace: 'nowrap' }}
+                            disabled={resolving === t.ticket_id}
+                            onClick={(e) => handleResolve(e, t.ticket_id)}
+                          >
+                            {resolving === t.ticket_id ? '…' : 'Resolve'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
 

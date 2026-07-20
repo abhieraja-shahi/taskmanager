@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REDIS_URL: str = "redis://localhost:6379/0"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    ZAMMAD_BASE_URL: str = ""
+    ZAMMAD_API_TOKEN: str = ""
 
     class Config:
         env_file = ".env"

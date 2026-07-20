@@ -1,11 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import require_manager
 from app.models.task import Task
@@ -31,6 +33,8 @@ class ZammadTicketResponse(BaseModel):
     article_body: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    resolved_by_id: Optional[int] = None
+    resolved_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -60,3 +64,41 @@ async def list_tasks_for_ticket(
         .order_by(Task.created_at.desc())
     )
     return result.scalars().all()
+
+
+@router.patch("/tickets/{ticket_id}/resolve", response_model=ZammadTicketResponse)
+async def resolve_zammad_ticket(
+    ticket_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_manager),
+):
+    result = await db.execute(
+        select(ZammadTicket).where(ZammadTicket.ticket_id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
+        raise HTTPException(status_code=503, detail="Zammad integration not configured")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.put(
+            f"{settings.ZAMMAD_BASE_URL}/api/v1/tickets/{ticket_id}",
+            json={"state": "resolved"},
+            headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
+            timeout=10.0,
+        )
+
+    if response.status_code not in (200, 201):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Zammad API error: {response.status_code} {response.text[:200]}",
+        )
+
+    ticket.state = "resolved"
+    ticket.resolved_by_id = current_user.id
+    ticket.resolved_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket
