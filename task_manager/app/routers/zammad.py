@@ -112,6 +112,54 @@ async def get_ticket_articles(
     ]
 
 
+class NoteRequest(BaseModel):
+    body: str
+
+
+@router.post("/tickets/{ticket_id}/notes", status_code=201)
+async def post_ticket_note(
+    ticket_id: int,
+    payload: NoteRequest,
+    current_user: User = Depends(require_manager),
+):
+    """Post an internal note to a Zammad ticket."""
+    if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
+        raise HTTPException(status_code=503, detail="Zammad integration not configured")
+
+    if not payload.body.strip():
+        raise HTTPException(status_code=422, detail="Note body cannot be empty")
+
+    async with httpx.AsyncClient(follow_redirects=True, verify=False) as client:
+        resp = await client.post(
+            f"{settings.ZAMMAD_BASE_URL}/api/v1/ticket_articles",
+            json={
+                "ticket_id": ticket_id,
+                "body": payload.body.strip(),
+                "type": "note",
+                "internal": True,
+                "content_type": "text/plain",
+            },
+            headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
+            timeout=10.0,
+        )
+
+    if resp.status_code not in (200, 201):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Zammad API error: {resp.status_code} {resp.text[:200]}",
+        )
+
+    article = resp.json()
+    return ZammadArticleResponse(
+        id=article.get("id", 0),
+        from_address=article.get("from"),
+        body=_strip_html(article.get("body") or "") or None,
+        sender=article.get("sender"),
+        created_at=article.get("created_at"),
+        internal=bool(article.get("internal", True)),
+    )
+
+
 @router.patch("/tickets/{ticket_id}/resolve", response_model=ZammadTicketResponse)
 async def resolve_zammad_ticket(
     ticket_id: int,

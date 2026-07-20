@@ -104,5 +104,6 @@ export const getZammadTickets    = (params)   => api.get('/zammad/tickets', { pa
 export const getTicketTasks      = (ticketId) => api.get(`/zammad/tickets/${ticketId}/tasks`)
 export const getTicketArticles   = (ticketId) => api.get(`/zammad/tickets/${ticketId}/articles`)
 export const resolveZammadTicket = (ticketId) => api.patch(`/zammad/tickets/${ticketId}/resolve`)
+export const postTicketNote      = (ticketId, body) => api.post(`/zammad/tickets/${ticketId}/notes`, { body })
 
 export default api

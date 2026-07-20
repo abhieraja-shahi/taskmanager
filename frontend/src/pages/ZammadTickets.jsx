@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket } from '../api/client'
+import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 
 const PRIORITY_COLORS = {
@@ -46,64 +46,141 @@ const SENDER_COLORS = {
   System:   'var(--text-muted)',
 }
 
-function ArticleHistory({ ticketId }) {
+function ArticleHistory({ ticketId, isResolved }) {
   const [articles, setArticles] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(null)
 
-  useEffect(() => {
+  const loadArticles = useCallback(() => {
+    setLoading(true)
     getTicketArticles(ticketId)
       .then(({ data }) => setArticles(Array.isArray(data) ? data : []))
       .catch(() => setError('Could not load conversation history.'))
       .finally(() => setLoading(false))
   }, [ticketId])
 
+  useEffect(() => { loadArticles() }, [loadArticles])
+
   if (loading) return <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Loading conversation…</div>
   if (error)   return <div style={{ fontSize: 12, color: 'var(--color-red)', marginBottom: 8 }}>{error}</div>
-  if (!articles || articles.length === 0) return null
+
+  return (
+    <>
+      {articles && articles.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+            Conversation ({articles.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {articles.map((a) => {
+              const senderColor = SENDER_COLORS[a.sender] || 'var(--text-secondary)'
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    background: a.internal ? 'color-mix(in srgb, var(--color-amber) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+                    border: `1px solid ${a.internal ? 'color-mix(in srgb, var(--color-amber) 30%, var(--border))' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: senderColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      {a.sender || 'Unknown'}
+                    </span>
+                    {a.internal && (
+                      <span style={{ fontSize: 10, color: 'var(--color-amber)', border: '1px solid var(--color-amber)', borderRadius: 4, padding: '0 4px', lineHeight: '16px' }}>
+                        internal
+                      </span>
+                    )}
+                    {a.from_address && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.from_address}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                      {formatDate(a.created_at)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                    {a.body || <em style={{ color: 'var(--text-muted)' }}>No content</em>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      {!isResolved && (
+        <ReplyComposer ticketId={ticketId} onNoteSent={loadArticles} />
+      )}
+    </>
+  )
+}
+
+function ReplyComposer({ ticketId, onNoteSent }) {
+  const [body, setBody]       = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError]     = useState(null)
+
+  const handleSend = async () => {
+    if (!body.trim()) return
+    setSending(true)
+    setError(null)
+    try {
+      await postTicketNote(ticketId, body.trim())
+      setBody('')
+      onNoteSent()
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Failed to post note.')
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-        Conversation ({articles.length})
+        Post Internal Note
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {articles.map((a) => {
-          const senderColor = SENDER_COLORS[a.sender] || 'var(--text-secondary)'
-          return (
-            <div
-              key={a.id}
-              style={{
-                background: a.internal ? 'color-mix(in srgb, var(--color-amber) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
-                border: `1px solid ${a.internal ? 'color-mix(in srgb, var(--color-amber) 30%, var(--border))' : 'var(--border)'}`,
-                borderRadius: 'var(--radius-md)',
-                padding: '10px 14px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: senderColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {a.sender || 'Unknown'}
-                </span>
-                {a.internal && (
-                  <span style={{ fontSize: 10, color: 'var(--color-amber)', border: '1px solid var(--color-amber)', borderRadius: 4, padding: '0 4px', lineHeight: '16px' }}>
-                    internal
-                  </span>
-                )}
-                {a.from_address && (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.from_address}
-                  </span>
-                )}
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                  {formatDate(a.created_at)}
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                {a.body || <em style={{ color: 'var(--text-muted)' }}>No content</em>}
-              </div>
-            </div>
-          )
-        })}
+      <div style={{
+        background: 'color-mix(in srgb, var(--color-amber) 5%, var(--bg-elevated))',
+        border: '1px solid color-mix(in srgb, var(--color-amber) 25%, var(--border))',
+        borderRadius: 'var(--radius-md)',
+        padding: '10px 14px',
+      }}>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Write an internal note visible only to agents…"
+          rows={3}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            resize: 'vertical',
+            fontSize: 12,
+            color: 'var(--text-primary)',
+            fontFamily: 'inherit',
+            lineHeight: 1.6,
+            boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+          {error
+            ? <span style={{ fontSize: 11, color: 'var(--color-red)' }}>{error}</span>
+            : <span style={{ fontSize: 10, color: 'var(--color-amber)' }}>internal · visible to agents only</span>
+          }
+          <button
+            className="btn btn-primary"
+            style={{ fontSize: 11, padding: '3px 12px', height: 'auto' }}
+            disabled={sending || !body.trim()}
+            onClick={handleSend}
+          >
+            {sending ? 'Sending…' : 'Post Note'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -333,7 +410,7 @@ export default function ZammadTickets() {
                     <tr>
                       <td />
                       <td colSpan={7}>
-                        <ArticleHistory ticketId={t.ticket_id} />
+                        <ArticleHistory ticketId={t.ticket_id} isResolved={RESOLVED_STATES.has((t.state || '').toLowerCase())} />
                         <LinkedTasks ticketId={t.ticket_id} />
                       </td>
                     </tr>
