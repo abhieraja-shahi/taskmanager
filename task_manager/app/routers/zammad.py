@@ -82,7 +82,7 @@ async def resolve_zammad_ticket(
     if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
         raise HTTPException(status_code=503, detail="Zammad integration not configured")
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         response = await client.put(
             f"{settings.ZAMMAD_BASE_URL}/api/v1/tickets/{ticket_id}",
             json={"state": "resolved"},
