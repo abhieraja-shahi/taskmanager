@@ -142,6 +142,8 @@ def _full_name(person: dict) -> Optional[str]:
 
 def _strip_html(text: str) -> str:
     import re
+    text = text.replace('\ufeff', '')
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
     clean = re.sub(r"<[^>]+>", " ", text)
     clean = re.sub(r"\s+", " ", clean).strip()
     return clean

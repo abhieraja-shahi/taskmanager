@@ -106,6 +106,9 @@ async def resolve_zammad_ticket(
 
 
 def _strip_html(text: str) -> str:
+    # Remove BOM and 4-byte chars that MySQL utf8 (3-byte) can't store
+    text = text.replace('\ufeff', '')
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
     clean = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", clean).strip()
 
