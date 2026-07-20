@@ -20,7 +20,7 @@ export default function Modal({ title, onClose, children, wide }) {
             }}
           >×</button>
         </div>
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {children}
         </div>
       </div>
