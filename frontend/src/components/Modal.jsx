@@ -10,7 +10,7 @@ export default function Modal({ title, onClose, children, wide }) {
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal${wide ? ' modal-wide' : ''}`}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div className="modal-title">{title}</div>
           <button
             onClick={onClose}
@@ -20,9 +20,7 @@ export default function Modal({ title, onClose, children, wide }) {
             }}
           >×</button>
         </div>
-        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   )

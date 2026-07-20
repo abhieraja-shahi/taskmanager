@@ -666,8 +666,7 @@ tbody td {
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
   box-shadow: var(--shadow-elevated);
   animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
