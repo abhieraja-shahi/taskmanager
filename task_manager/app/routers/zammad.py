@@ -1,10 +1,11 @@
+import re
 from datetime import datetime, timezone
 from typing import List, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -102,3 +103,63 @@ async def resolve_zammad_ticket(
     await db.commit()
     await db.refresh(ticket)
     return ticket
+
+
+def _strip_html(text: str) -> str:
+    clean = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", clean).strip()
+
+
+async def _fetch_article_for_ticket(client: httpx.AsyncClient, zammad_ticket_id: int):
+    """Return (from_address, body) from the first customer article, or (None, None)."""
+    try:
+        resp = await client.get(
+            f"{settings.ZAMMAD_BASE_URL}/api/v1/ticket_articles/by_ticket/{zammad_ticket_id}",
+            headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
+            timeout=8.0,
+        )
+        resp.raise_for_status()
+        articles = resp.json()
+    except Exception:
+        return None, None
+
+    if not isinstance(articles, list) or not articles:
+        return None, None
+
+    preferred = next(
+        (a for a in articles if a.get("sender") == "Customer" and not a.get("internal")),
+        articles[0],
+    )
+    body_raw = preferred.get("body") or ""
+    return preferred.get("from"), _strip_html(body_raw) or None
+
+
+@router.post("/tickets/sync-articles", response_model=dict)
+async def sync_ticket_articles(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_manager),
+):
+    """Fetch and backfill article_from / article_body for tickets that are missing them."""
+    if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
+        raise HTTPException(status_code=503, detail="Zammad integration not configured")
+
+    result = await db.execute(
+        select(ZammadTicket).where(
+            (ZammadTicket.article_body == None) | (ZammadTicket.article_from == None)  # noqa: E711
+        )
+    )
+    tickets = result.scalars().all()
+
+    updated = 0
+    async with httpx.AsyncClient(follow_redirects=True, verify=False) as client:
+        for t in tickets:
+            from_addr, body = await _fetch_article_for_ticket(client, t.ticket_id)
+            if from_addr or body:
+                if t.article_from is None:
+                    t.article_from = from_addr
+                if t.article_body is None:
+                    t.article_body = body
+                updated += 1
+
+    await db.commit()
+    return {"synced": len(tickets), "updated": updated}

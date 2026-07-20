@@ -1,5 +1,8 @@
+import os
+import re
 import logging
-from ticket_parser import parse_ticket, Ticket
+import requests
+from ticket_parser import parse_ticket, Ticket, Article
 from db import upsert_ticket
 
 logger = logging.getLogger(__name__)
@@ -9,12 +12,68 @@ logger = logging.getLogger(__name__)
 DEV_GROUP = "Development"
 
 
+def _fetch_first_article(ticket_id: int) -> Article | None:
+    """Fetch the first customer-visible article for a ticket from Zammad API."""
+    base_url = os.environ.get("ZAMMAD_BASE_URL", "").rstrip("/")
+    api_token = os.environ.get("ZAMMAD_API_TOKEN", "")
+    if not base_url or not api_token:
+        return None
+
+    try:
+        resp = requests.get(
+            f"{base_url}/api/v1/ticket_articles/by_ticket/{ticket_id}",
+            headers={"Authorization": f"Token token={api_token}"},
+            timeout=8,
+            verify=False,
+        )
+        resp.raise_for_status()
+        articles = resp.json()
+    except Exception as exc:
+        logger.warning("Could not fetch articles for ticket %d from Zammad: %s", ticket_id, exc)
+        return None
+
+    if not isinstance(articles, list) or not articles:
+        return None
+
+    # Prefer the first non-internal article sent by a Customer
+    preferred = next(
+        (a for a in articles if a.get("sender") == "Customer" and not a.get("internal")),
+        articles[0],
+    )
+
+    body_raw = preferred.get("body", "") or ""
+    body_clean = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body_raw)).strip()
+
+    return Article(
+        article_id=preferred.get("id"),
+        subject=preferred.get("subject"),
+        body=body_clean,
+        body_raw=body_raw,
+        content_type=preferred.get("content_type"),
+        sender=preferred.get("sender"),
+        from_address=preferred.get("from"),
+        to_address=preferred.get("to"),
+        cc=preferred.get("cc"),
+        article_type=preferred.get("type"),
+        created_at=preferred.get("created_at"),
+        attachments=[],
+    )
+
+
 def handle_ticket_created(payload: dict) -> None:
     try:
         ticket = parse_ticket(payload)
     except Exception as exc:
         logger.error("Failed to parse ticket payload: %s", exc, exc_info=True)
         return
+
+    # If the webhook payload didn't include article data, fetch it from Zammad API.
+    if ticket.article is None:
+        ticket.article = _fetch_first_article(ticket.ticket_id)
+        if ticket.article:
+            logger.info("Ticket #%s: fetched article from Zammad API", ticket.number)
+        else:
+            logger.info("Ticket #%s: no article available", ticket.number)
 
     _log_ticket(ticket)
 

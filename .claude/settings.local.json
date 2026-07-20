@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__dbeaver__list_connections"
+      "mcp__dbeaver__list_connections",
+      "Bash(curl -k -s \"https://192.168.5.47/api/v1/tickets/2364284\" \\\\\n  -H \"Authorization: Token token=uQFKM3CTcmzH0hMguJGNJ6r9fldqbClWyt-KkIUyAWtjhiPuh_z-aGQ823SJrRNg\")"
     ]
   }
 }
