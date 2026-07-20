@@ -39,8 +39,13 @@ export default function CreateTask() {
     ? allUsers
     : (() => {
         const seen = new Map()
+        // Always include self for self-assignment
+        if (user) {
+          seen.set(user.id, { id: user.id, username: user.username, role: user.role, teams: ['(you)'] })
+        }
         myTeams.forEach((team) => {
           team.members?.forEach((m) => {
+            if (m.user?.role === 'admin') return  // admins are not task assignees
             if (!seen.has(m.user_id)) {
               seen.set(m.user_id, {
                 id: m.user_id,

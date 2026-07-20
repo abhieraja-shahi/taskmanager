@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.bank import Bank
+from app.models.bank import Bank, task_banks
 from app.models.comment import Comment
 from app.models.task import Task, TaskStatus
 from app.models.task_assignment import TaskAssignment, AssignmentStatus
@@ -63,9 +63,10 @@ class TaskService:
                     detail="Due date must be after the start date",
                 )
 
-        # Managers can only assign tasks to users in their managed teams
+        # Managers can only assign tasks to users in their managed teams (or themselves)
         if creator.role == UserRole.MANAGER.value:
             managed_ids = await self._get_managed_user_ids(db, creator.id)
+            managed_ids.add(creator.id)
             invalid = assignee_ids - managed_ids
             if invalid:
                 raise HTTPException(
@@ -89,9 +90,10 @@ class TaskService:
             db.add(TaskAssignment(task_id=task.id, user_id=user_id))
 
         if data.bank_ids:
-            result = await db.execute(select(Bank).where(Bank.id.in_(data.bank_ids)))
-            banks = result.scalars().all()
-            task.banks = list(banks)
+            await db.execute(
+                task_banks.insert(),
+                [{"task_id": task.id, "bank_id": bid} for bid in data.bank_ids]
+            )
 
         await log_activity(db, task.id, creator.id, "TASK_CREATED",
                            detail=f"Assigned to {len(assignee_ids)} user(s)")
@@ -168,6 +170,7 @@ class TaskService:
         # Manager scope check
         if manager.role == UserRole.MANAGER.value:
             managed_ids = await self._get_managed_user_ids(db, manager.id)
+            managed_ids.add(manager.id)
             invalid = set(assignee_ids) - managed_ids
             if invalid:
                 raise HTTPException(

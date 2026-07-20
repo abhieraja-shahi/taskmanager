@@ -652,8 +652,9 @@ tbody td {
   backdrop-filter: blur(4px);
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
   padding: 20px;
   animation: fadeIn 0.15s ease;
 }
@@ -665,8 +666,18 @@ tbody td {
   padding: 28px;
   width: 100%;
   max-width: 480px;
+  max-height: calc(100vh - 40px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-elevated);
   animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-wide { max-width: 640px; }

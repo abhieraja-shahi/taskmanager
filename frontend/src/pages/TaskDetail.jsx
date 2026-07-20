@@ -202,8 +202,13 @@ export default function TaskDetail() {
   const availableUsers = (() => {
     const seen = new Map()
     const myTeams = isAdmin ? teams : teams.filter((t) => t.managers?.some((m) => m.user_id === user?.id))
+    // Always include self for self-assignment
+    if (!isAdmin && user) {
+      seen.set(user.id, { id: user.id, username: user.username })
+    }
     myTeams.forEach((team) => {
       team.members?.forEach((m) => {
+        if (!isAdmin && m.user?.role === 'admin') return  // admins are not task assignees
         if (!seen.has(m.user_id)) {
           seen.set(m.user_id, {
             id: m.user_id,
