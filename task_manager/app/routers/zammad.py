@@ -19,6 +19,15 @@ from app.schemas.task import TaskSummaryResponse
 router = APIRouter(prefix="/zammad", tags=["zammad"])
 
 
+class ZammadArticleResponse(BaseModel):
+    id: int
+    from_address: Optional[str] = None
+    body: Optional[str] = None
+    sender: Optional[str] = None
+    created_at: Optional[str] = None
+    internal: bool = False
+
+
 class ZammadTicketResponse(BaseModel):
     id: int
     ticket_id: int
@@ -65,6 +74,42 @@ async def list_tasks_for_ticket(
         .order_by(Task.created_at.desc())
     )
     return result.scalars().all()
+
+
+@router.get("/tickets/{ticket_id}/articles", response_model=List[ZammadArticleResponse])
+async def get_ticket_articles(
+    ticket_id: int,
+    _: User = Depends(require_manager),
+):
+    """Fetch all articles for a ticket directly from Zammad."""
+    if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
+        raise HTTPException(status_code=503, detail="Zammad integration not configured")
+
+    async with httpx.AsyncClient(follow_redirects=True, verify=False) as client:
+        resp = await client.get(
+            f"{settings.ZAMMAD_BASE_URL}/api/v1/ticket_articles/by_ticket/{ticket_id}",
+            headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
+            timeout=8.0,
+        )
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Zammad API error: {resp.status_code}")
+
+    articles = resp.json()
+    if not isinstance(articles, list):
+        return []
+
+    return [
+        ZammadArticleResponse(
+            id=a.get("id", 0),
+            from_address=a.get("from"),
+            body=_strip_html(a.get("body") or "") or None,
+            sender=a.get("sender"),
+            created_at=a.get("created_at"),
+            internal=bool(a.get("internal", False)),
+        )
+        for a in articles
+    ]
 
 
 @router.patch("/tickets/{ticket_id}/resolve", response_model=ZammadTicketResponse)

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getZammadTickets, getTicketTasks, resolveZammadTicket } from '../api/client'
+import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 
 const PRIORITY_COLORS = {
@@ -38,6 +38,75 @@ function PriorityBadge({ priority }) {
   const color = PRIORITY_COLORS[priority.toLowerCase()] || 'var(--text-secondary)'
   const label = priority.replace(/^\d\s/, '')
   return <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}</span>
+}
+
+const SENDER_COLORS = {
+  Customer: 'var(--color-cyan)',
+  Agent:    'var(--color-amber)',
+  System:   'var(--text-muted)',
+}
+
+function ArticleHistory({ ticketId }) {
+  const [articles, setArticles] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
+
+  useEffect(() => {
+    getTicketArticles(ticketId)
+      .then(({ data }) => setArticles(Array.isArray(data) ? data : []))
+      .catch(() => setError('Could not load conversation history.'))
+      .finally(() => setLoading(false))
+  }, [ticketId])
+
+  if (loading) return <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Loading conversation…</div>
+  if (error)   return <div style={{ fontSize: 12, color: 'var(--color-red)', marginBottom: 8 }}>{error}</div>
+  if (!articles || articles.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+        Conversation ({articles.length})
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {articles.map((a) => {
+          const senderColor = SENDER_COLORS[a.sender] || 'var(--text-secondary)'
+          return (
+            <div
+              key={a.id}
+              style={{
+                background: a.internal ? 'color-mix(in srgb, var(--color-amber) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+                border: `1px solid ${a.internal ? 'color-mix(in srgb, var(--color-amber) 30%, var(--border))' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-md)',
+                padding: '10px 14px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: senderColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {a.sender || 'Unknown'}
+                </span>
+                {a.internal && (
+                  <span style={{ fontSize: 10, color: 'var(--color-amber)', border: '1px solid var(--color-amber)', borderRadius: 4, padding: '0 4px', lineHeight: '16px' }}>
+                    internal
+                  </span>
+                )}
+                {a.from_address && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.from_address}
+                  </span>
+                )}
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                  {formatDate(a.created_at)}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                {a.body || <em style={{ color: 'var(--text-muted)' }}>No content</em>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function LinkedTasks({ ticketId }) {
@@ -264,32 +333,7 @@ export default function ZammadTickets() {
                     <tr>
                       <td />
                       <td colSpan={7}>
-                        {(t.article_from || t.article_body) && (
-                          <div style={{
-                            background: 'var(--bg-elevated)',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-md)',
-                            padding: '12px 14px',
-                            marginBottom: 8,
-                          }}>
-                            {t.article_from && (
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-                                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>From:</span>{' '}
-                                {t.article_from}
-                              </div>
-                            )}
-                            {t.article_body && (
-                              <div style={{
-                                fontSize: 12,
-                                color: 'var(--text-secondary)',
-                                whiteSpace: 'pre-wrap',
-                                lineHeight: 1.6,
-                              }}>
-                                {t.article_body}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <ArticleHistory ticketId={t.ticket_id} />
                         <LinkedTasks ticketId={t.ticket_id} />
                       </td>
                     </tr>
