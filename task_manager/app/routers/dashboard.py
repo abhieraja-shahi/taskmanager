@@ -29,7 +29,10 @@ async def manager_dashboard(
     db: AsyncSession = Depends(get_db),
     manager: User = Depends(require_manager),
 ):
-    query = select(Task).options(selectinload(Task.creator))
+    query = select(Task).options(
+        selectinload(Task.creator),
+        selectinload(Task.assignments).selectinload(TaskAssignment.user),
+    )
 
     # Admins see all tasks; managers see only tasks assigned to members of their teams
     if manager.role != UserRole.ADMIN.value:

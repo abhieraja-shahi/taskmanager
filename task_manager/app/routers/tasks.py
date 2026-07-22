@@ -51,7 +51,10 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_manager),
 ):
-    query = select(Task).options(selectinload(Task.creator))
+    query = select(Task).options(
+        selectinload(Task.creator),
+        selectinload(Task.assignments).selectinload(TaskAssignment.user),
+    )
 
     if user.role != UserRole.ADMIN.value:
         managed_task_ids = (

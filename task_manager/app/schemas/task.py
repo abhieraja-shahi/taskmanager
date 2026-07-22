@@ -169,5 +169,6 @@ class TaskSummaryResponse(BaseModel):
     completed_at: Optional[datetime] = None
     zammad_ticket_id: Optional[int] = None
     my_assignment_status: Optional[str] = None
+    assignments: List[AssignmentResponse] = []
 
     model_config = {"from_attributes": True}

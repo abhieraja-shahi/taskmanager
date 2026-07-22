@@ -187,7 +187,7 @@ export default function ManagerDashboard() {
                       <td><StatusBadge status={task.status} /></td>
                       <td>
                         <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                          —
+                          {task.assignments?.[0]?.user?.username ?? '—'}
                         </span>
                       </td>
                       <td>

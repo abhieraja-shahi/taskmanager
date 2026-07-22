@@ -577,7 +577,7 @@ export default function Tasks() {
                             <td><StatusBadge status={t.status} /></td>
                             <td>
                               <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                                {t.assignments?.length ?? 0}
+                                {t.assignments?.[0]?.user?.username ?? '—'}
                               </span>
                             </td>
                             <td>
@@ -922,7 +922,7 @@ export default function Tasks() {
                     <td><StatusBadge status={task.status} /></td>
                     <td>
                       <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                        {task.assignments?.length ?? 0}
+                        {task.assignments?.[0]?.user?.username ?? '—'}
                       </span>
                     </td>
                     <td>
