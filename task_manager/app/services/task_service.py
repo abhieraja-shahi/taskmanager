@@ -14,6 +14,7 @@ from app.models.team import Team, TeamMember, TeamManager
 from app.models.user import User, UserRole
 from app.schemas.task import TaskUpdateSchema
 from app.services.activity_service import log_activity
+from app.services.email_service import send_assignment_email
 from app.services.notification_service import notify
 
 
@@ -99,6 +100,21 @@ class TaskService:
                            detail=f"Assigned to {len(assignee_ids)} user(s)")
         await notify("ASSIGNED", task, user_ids=list(assignee_ids), db=db)
         await db.commit()
+
+        # Send assignment emails after commit so task_id is stable
+        assignee_result = await db.execute(
+            select(User).where(User.id.in_(assignee_ids))
+        )
+        assignee_users = assignee_result.scalars().all()
+        due_str = task.due_date.strftime("%B %d, %Y") if task.due_date else "N/A"
+        await send_assignment_email(
+            assignees=[{"email": u.email, "username": u.username} for u in assignee_users],
+            task_title=task.title,
+            task_description=task.description or "",
+            due_date=due_str,
+            assigned_by_name=creator.username,
+            task_id=task.id,
+        )
 
         return await self._load_task(db, task.id)
 
@@ -202,6 +218,23 @@ class TaskService:
         if added_ids:
             await notify("ASSIGNED", task, user_ids=added_ids, db=db)
         await db.commit()
+
+        # Send assignment emails to newly added assignees
+        if added_ids:
+            added_result = await db.execute(
+                select(User).where(User.id.in_(added_ids))
+            )
+            added_users = added_result.scalars().all()
+            due_str = task.due_date.strftime("%B %d, %Y") if task.due_date else "N/A"
+            await send_assignment_email(
+                assignees=[{"email": u.email, "username": u.username} for u in added_users],
+                task_title=task.title,
+                task_description=task.description or "",
+                due_date=due_str,
+                assigned_by_name=manager.username,
+                task_id=task_id,
+            )
+
         return await self._load_task(db, task_id)
 
     async def accept_task(self, db: AsyncSession, task_id: int, user_id: int) -> Task:

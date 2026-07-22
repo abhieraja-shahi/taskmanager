@@ -11,6 +11,14 @@ class Settings(BaseSettings):
     ZAMMAD_BASE_URL: str = ""
     ZAMMAD_API_TOKEN: str = ""
 
+    # SMTP email settings
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_ENABLED: bool = False
+
     class Config:
         env_file = ".env"
 
