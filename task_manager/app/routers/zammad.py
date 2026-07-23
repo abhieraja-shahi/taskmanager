@@ -5,7 +5,7 @@ from typing import List, Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -49,17 +49,45 @@ class ZammadTicketResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("/tickets", response_model=List[ZammadTicketResponse])
+class ZammadTicketsPage(BaseModel):
+    items: List[ZammadTicketResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+@router.get("/tickets", response_model=ZammadTicketsPage)
 async def list_zammad_tickets(
     state: Optional[str] = Query(None, description="Filter by ticket state"),
+    search: Optional[str] = Query(None, description="Search across title, number, customer, owner"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_manager),
 ):
-    stmt = select(ZammadTicket).order_by(ZammadTicket.created_at.desc())
+    base = select(ZammadTicket)
     if state:
-        stmt = stmt.where(ZammadTicket.state == state)
+        base = base.where(ZammadTicket.state == state)
+    if search:
+        term = f"%{search.strip()}%"
+        base = base.where(or_(
+            ZammadTicket.title.ilike(term),
+            ZammadTicket.number.ilike(term),
+            ZammadTicket.customer_name.ilike(term),
+            ZammadTicket.customer_email.ilike(term),
+            ZammadTicket.owner_email.ilike(term),
+        ))
+
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = count_result.scalar_one()
+
+    stmt = base.order_by(ZammadTicket.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    pages = max(1, (total + page_size - 1) // page_size)
+    return ZammadTicketsPage(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
 
 @router.get("/tickets/{ticket_id}/tasks", response_model=List[TaskSummaryResponse])

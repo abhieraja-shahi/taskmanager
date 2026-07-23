@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
@@ -254,31 +254,67 @@ function LinkedTasks({ ticketId }) {
 }
 
 const RESOLVED_STATES = new Set(['resolved', 'closed'])
+const PAGE_SIZE = 20
 
 export default function ZammadTickets() {
   const navigate = useNavigate()
   const { isManager } = useAuth()
   const [tickets, setTickets]         = useState([])
+  const [total, setTotal]             = useState(0)
+  const [pages, setPages]             = useState(1)
+  const [page, setPage]               = useState(1)
   const [loading, setLoading]         = useState(true)
   const [stateFilter, setStateFilter] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch]           = useState('')
   const [expanded, setExpanded]       = useState(null)
   const [resolving, setResolving]     = useState(null)
+  const debounceRef                   = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = {}
+      const params = { page, page_size: PAGE_SIZE }
       if (stateFilter) params.state = stateFilter
+      if (search) params.search = search
       const { data } = await getZammadTickets(params)
-      setTickets(Array.isArray(data) ? data : [])
+      setTickets(Array.isArray(data.items) ? data.items : [])
+      setTotal(data.total ?? 0)
+      setPages(data.pages ?? 1)
     } catch {
       setTickets([])
+      setTotal(0)
+      setPages(1)
     } finally {
       setLoading(false)
     }
-  }, [stateFilter])
+  }, [stateFilter, search, page])
 
   useEffect(() => { load() }, [load])
+
+  const handleFilterChange = (key) => {
+    setStateFilter(key)
+    setPage(1)
+    setExpanded(null)
+  }
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value
+    setSearchInput(val)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearch(val.trim())
+      setPage(1)
+      setExpanded(null)
+    }, 300)
+  }
+
+  const handleSearchClear = () => {
+    setSearchInput('')
+    setSearch('')
+    setPage(1)
+    setExpanded(null)
+  }
 
   const toggleExpand = (id) => setExpanded((prev) => (prev === id ? null : id))
 
@@ -304,21 +340,50 @@ export default function ZammadTickets() {
         <div>
           <div className="page-heading">Support Tickets</div>
           <div className="page-subheading">
-            {loading ? 'Loading…' : `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}`}
+            {loading ? 'Loading…' : `${total} ticket${total !== 1 ? 's' : ''}${pages > 1 ? ` · page ${page} of ${pages}` : ''}`}
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {STATE_FILTERS.map(({ key, label }) => (
           <button
             key={key}
             className={`filter-pill${stateFilter === key ? ' active' : ''}`}
-            onClick={() => setStateFilter(key)}
+            onClick={() => handleFilterChange(key)}
           >
             {label}
           </button>
         ))}
+        <div style={{ marginLeft: 'auto', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={handleSearchChange}
+            placeholder="Search tickets…"
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              padding: '5px 28px 5px 10px',
+              outline: 'none',
+              width: 220,
+            }}
+          />
+          {searchInput && (
+            <button
+              onClick={handleSearchClear}
+              style={{
+                position: 'absolute', right: 6, background: 'none', border: 'none',
+                cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, lineHeight: 1, padding: 0,
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -328,7 +393,7 @@ export default function ZammadTickets() {
           <div className="empty-icon">◯</div>
           <div className="empty-title">No Tickets Found</div>
           <div className="empty-sub">
-            {stateFilter ? 'No tickets match the selected filter.' : 'Tickets assigned to the development team will appear here.'}
+            {search || stateFilter ? 'No tickets match your search or filter.' : 'Tickets assigned to the development team will appear here.'}
           </div>
         </div>
       ) : (
@@ -419,6 +484,67 @@ export default function ZammadTickets() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {pages > 1 && !loading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 }}>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 12, padding: '4px 12px', height: 'auto' }}
+            disabled={page === 1}
+            onClick={() => setPage(1)}
+          >
+            «
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 12, padding: '4px 12px', height: 'auto' }}
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            ‹ Prev
+          </button>
+
+          {Array.from({ length: pages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === pages || Math.abs(p - page) <= 2)
+            .reduce((acc, p, idx, arr) => {
+              if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…')
+              acc.push(p)
+              return acc
+            }, [])
+            .map((item, idx) =>
+              item === '…' ? (
+                <span key={`ellipsis-${idx}`} style={{ fontSize: 12, color: 'var(--text-muted)', padding: '0 4px' }}>…</span>
+              ) : (
+                <button
+                  key={item}
+                  className={`btn${item === page ? ' btn-primary' : ' btn-secondary'}`}
+                  style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minWidth: 32 }}
+                  onClick={() => setPage(item)}
+                >
+                  {item}
+                </button>
+              )
+            )
+          }
+
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 12, padding: '4px 12px', height: 'auto' }}
+            disabled={page === pages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next ›
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 12, padding: '4px 12px', height: 'auto' }}
+            disabled={page === pages}
+            onClick={() => setPage(pages)}
+          >
+            »
+          </button>
         </div>
       )}
     </>
