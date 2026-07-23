@@ -21,11 +21,13 @@ def _build_assignment_html(
     task_id: int,
 ) -> str:
     desc_block = (
-        f'<p style="margin:0 0 8px 0;color:#94a3b8;font-size:14px;line-height:1.6;">'
+        f'<p style="margin:0 0 12px 0;font-size:14px;color:#6B7280;line-height:1.6;">'
         f'{task_description}</p>'
         if task_description
         else ""
     )
+
+    logo_url = f"{APP_URL}/ethereal-logo-white.png"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -34,163 +36,140 @@ def _build_assignment_html(
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>New Task Assigned</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0f172a;font-family:'Segoe UI',Arial,sans-serif;">
+<body style="margin:0;padding:0;background-color:#F5F9FF;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0"
-         style="background-color:#0f172a;padding:40px 16px;">
+         style="background-color:#F5F9FF;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" border="0"
                style="max-width:600px;width:100%;">
 
-          <!-- Header -->
+          <!-- Header — navy brand bar -->
           <tr>
-            <td style="padding-bottom:32px;" align="center">
-              <table cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                              border-radius:12px;padding:10px 20px;">
-                    <span style="font-size:20px;font-weight:700;color:#ffffff;
-                                 letter-spacing:0.5px;">&#9670; Ethereal</span>
-                  </td>
-                </tr>
-              </table>
+            <td style="background-color:#191e5c;border-radius:12px 12px 0 0;
+                       padding:24px 32px;" align="left">
+              <img src="{logo_url}"
+                   alt="Ethereal Informatics"
+                   width="180" height="auto"
+                   style="display:block;border:0;max-width:180px;" />
             </td>
           </tr>
 
-          <!-- Card -->
+          <!-- Teal accent bar -->
           <tr>
-            <td style="background-color:#1e293b;border-radius:16px;
-                       border:1px solid #334155;overflow:hidden;">
+            <td style="background-color:#55D7B3;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
 
-              <!-- Card top accent -->
-              <tr>
-                <td style="background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);
-                           height:4px;display:block;"></td>
-              </tr>
+          <!-- Card body -->
+          <tr>
+            <td style="background-color:#FFFFFF;border:1px solid #E5EAF2;
+                       border-top:none;border-radius:0 0 12px 12px;padding:40px 40px 32px;">
 
-              <!-- Card body -->
-              <tr>
-                <td style="padding:40px 40px 32px;">
+              <!-- Badge + heading -->
+              <p style="margin:0 0 4px;font-size:11px;font-weight:600;
+                        letter-spacing:1.5px;color:#55D7B3;text-transform:uppercase;">
+                New Assignment
+              </p>
+              <h1 style="margin:0 0 20px;font-size:22px;font-weight:700;
+                         color:#191e5c;line-height:1.3;">
+                You have a new task
+              </h1>
 
-                  <!-- Icon + heading -->
-                  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
-                    <tr>
-                      <td style="vertical-align:middle;padding-right:16px;">
-                        <div style="width:48px;height:48px;border-radius:12px;
-                                    background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                                    text-align:center;line-height:48px;
-                                    font-size:22px;">&#128203;</div>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0;font-size:11px;font-weight:600;
-                                  letter-spacing:1.5px;color:#6366f1;
-                                  text-transform:uppercase;">New Assignment</p>
-                        <h1 style="margin:4px 0 0;font-size:22px;font-weight:700;
-                                   color:#f1f5f9;line-height:1.3;">
-                          You have a new task
-                        </h1>
-                      </td>
-                    </tr>
-                  </table>
+              <!-- Greeting -->
+              <p style="margin:0 0 28px;font-size:15px;color:#434242;line-height:1.7;">
+                Hi <strong style="color:#191e5c;">{assignee_name}</strong>,<br/>
+                <strong style="color:#191e5c;">{assigned_by}</strong> has assigned
+                you a task that requires your attention.
+              </p>
 
-                  <!-- Greeting -->
-                  <p style="margin:0 0 24px;font-size:16px;color:#cbd5e1;line-height:1.6;">
-                    Hi <strong style="color:#f1f5f9;">{assignee_name}</strong>,
-                    <br/>
-                    <strong style="color:#a5b4fc;">{assigned_by}</strong> has assigned
-                    you a task that requires your attention.
-                  </p>
+              <!-- Task card -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#F5F9FF;border-radius:10px;
+                            border:1px solid #E5EAF2;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;
+                              letter-spacing:1.5px;color:#191e5c;text-transform:uppercase;">
+                      Task
+                    </p>
+                    <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;
+                               color:#191e5c;line-height:1.4;">
+                      {task_title}
+                    </h2>
+                    {desc_block}
+                    <!-- Divider -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr><td style="border-top:1px solid #E5EAF2;padding-top:16px;"></td></tr>
+                    </table>
+                    <!-- Meta row -->
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-top:4px;">
+                      <tr>
+                        <td style="padding-right:40px;">
+                          <p style="margin:0;font-size:11px;font-weight:600;
+                                    letter-spacing:1px;color:#9CA3AF;text-transform:uppercase;">
+                            Due Date
+                          </p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;
+                                    color:#D97706;">
+                            &#128197; {due_date}
+                          </p>
+                        </td>
+                        <td>
+                          <p style="margin:0;font-size:11px;font-weight:600;
+                                    letter-spacing:1px;color:#9CA3AF;text-transform:uppercase;">
+                            Assigned By
+                          </p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;
+                                    color:#191e5c;">
+                            &#128100; {assigned_by}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-                  <!-- Task card -->
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                         style="background-color:#0f172a;border-radius:12px;
-                                border:1px solid #334155;margin-bottom:28px;">
-                    <tr>
-                      <td style="padding:24px;">
-                        <p style="margin:0 0 4px 0;font-size:11px;font-weight:600;
-                                  letter-spacing:1.5px;color:#6366f1;
-                                  text-transform:uppercase;">Task</p>
-                        <h2 style="margin:0 0 16px;font-size:18px;font-weight:700;
-                                   color:#f1f5f9;line-height:1.4;">
-                          {task_title}
-                        </h2>
-                        {desc_block}
-                        <!-- Divider -->
-                        <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                               style="border-top:1px solid #1e293b;margin:16px 0;">
-                          <tr><td></td></tr>
-                        </table>
-                        <!-- Meta row -->
-                        <table cellpadding="0" cellspacing="0" border="0">
-                          <tr>
-                            <td style="padding-right:32px;">
-                              <p style="margin:0;font-size:11px;font-weight:600;
-                                        letter-spacing:1px;color:#64748b;
-                                        text-transform:uppercase;">Due Date</p>
-                              <p style="margin:4px 0 0;font-size:14px;font-weight:600;
-                                        color:#f59e0b;">
-                                &#128197; {due_date}
-                              </p>
-                            </td>
-                            <td>
-                              <p style="margin:0;font-size:11px;font-weight:600;
-                                        letter-spacing:1px;color:#64748b;
-                                        text-transform:uppercase;">Assigned By</p>
-                              <p style="margin:4px 0 0;font-size:14px;font-weight:600;
-                                        color:#a5b4fc;">
-                                &#128100; {assigned_by}
-                              </p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
+              <!-- CTA button -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="border-radius:8px;background-color:#191e5c;">
+                    <a href="{APP_URL}"
+                       style="display:inline-block;padding:13px 30px;font-size:14px;
+                              font-weight:600;color:#ffffff;text-decoration:none;
+                              letter-spacing:0.3px;">
+                      View Task &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
 
-                  <!-- CTA button -->
-                  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
-                    <tr>
-                      <td style="border-radius:10px;
-                                 background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-                        <a href="{APP_URL}"
-                           style="display:inline-block;padding:14px 32px;
-                                  font-size:15px;font-weight:600;color:#ffffff;
-                                  text-decoration:none;letter-spacing:0.3px;">
-                          View Task &rarr;
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- Login note -->
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                         style="background-color:#1e3a5f22;border-radius:8px;
-                                border:1px solid #1d4ed840;margin-bottom:8px;">
-                    <tr>
-                      <td style="padding:14px 18px;">
-                        <p style="margin:0;font-size:13px;color:#93c5fd;line-height:1.5;">
-                          &#128274;&nbsp;
-                          Log in to <strong>{APP_URL}</strong> with your credentials
-                          to review and accept this task.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-
-                </td>
-              </tr>
+              <!-- Login note -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#EBF3FF;border-radius:8px;
+                            border:1px solid #CFE5FF;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0;font-size:13px;color:#434242;line-height:1.5;">
+                      &#128274;&nbsp;
+                      Log in to <strong style="color:#191e5c;">{APP_URL}</strong>
+                      with your credentials to review and accept this task.
+                    </p>
+                  </td>
+                </tr>
+              </table>
 
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="padding:28px 0 8px;" align="center">
-              <p style="margin:0 0 6px;font-size:12px;color:#475569;">
+            <td style="padding:24px 0 8px;" align="center">
+              <p style="margin:0 0 4px;font-size:12px;color:#9CA3AF;">
                 This is an automated notification from
-                <strong style="color:#6366f1;">Ethereal Task Tracker</strong>.
+                <strong style="color:#191e5c;">Ethereal Informatics Task Manager</strong>.
               </p>
-              <p style="margin:0;font-size:11px;color:#334155;">
+              <p style="margin:0;font-size:11px;color:#9CA3AF;">
                 Please do not reply to this email.
               </p>
             </td>

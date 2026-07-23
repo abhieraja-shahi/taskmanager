@@ -19,7 +19,9 @@ function formatDate(d, includeTime = false) {
 
 function toInputDate(d) {
   if (!d) return ''
-  return new Date(d).toISOString().slice(0, 16)
+  const dt = new Date(d)
+  const pad = n => String(n).padStart(2, '0')
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
 }
 
 function dueLabel(due, status) {
@@ -174,8 +176,8 @@ export default function TaskDetail() {
       const payload = {
         title:       editForm.title,
         description: editForm.description || null,
-        due_date:    new Date(editForm.due_date).toISOString(),
-        start_date:  editForm.start_date ? new Date(editForm.start_date).toISOString() : null,
+        due_date:    editForm.due_date,
+        start_date:  editForm.start_date || null,
         bank_ids:    editForm.bank_ids,
       }
       await updateTask(id, payload)

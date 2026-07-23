@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { login as loginApi } from '../api/client'
 import api from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
+import logoBlue from '../../public/ethereal-logo-blue.png'
 
 export default function Login() {
   const { login } = useAuth()
@@ -37,9 +38,8 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-diamond" />
-          <div className="auth-logo-text">ETHEREAL</div>
-          <div className="auth-logo-sub">Task Command Interface</div>
+          <img src={logoBlue} alt="Ethereal Informatics" className="auth-logo-img" />
+          <div className="auth-logo-sub">Task Manager</div>
         </div>
 
         <div className="auth-title">Sign In</div>

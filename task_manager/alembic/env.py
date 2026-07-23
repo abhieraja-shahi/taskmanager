@@ -10,7 +10,7 @@ if config.config_file_name is not None:
 
 # Override sqlalchemy.url from app settings
 from app.config import settings
-config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL.replace("%", "%%"))
 
 # Import all models so their tables are registered in Base.metadata
 from app.database import Base

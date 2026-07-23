@@ -104,8 +104,8 @@ export default function CreateTask() {
     try {
       const payload = {
         ...form,
-        due_date:         new Date(form.due_date).toISOString(),
-        start_date:       form.start_date ? new Date(form.start_date).toISOString() : undefined,
+        due_date:         form.due_date,
+        start_date:       form.start_date || undefined,
         zammad_ticket_id: linkedTicket ? linkedTicket.ticket_id : null,
         bank_ids:         form.bank_ids,
       }
