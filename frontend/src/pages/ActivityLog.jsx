@@ -227,6 +227,7 @@ export default function ActivityLog() {
           <div className="empty-sub">{hasFilters ? 'Try adjusting your filters.' : 'Activity will appear here as tasks are worked on.'}</div>
         </div>
       ) : (
+        <>
         <div className="table-wrap">
           <table>
             <thead>
@@ -304,6 +305,7 @@ export default function ActivityLog() {
             </button>
           </div>
         )}
+        </>
       )}
     </>
   )
