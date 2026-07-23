@@ -37,13 +37,18 @@ function formatDate(d) {
   })
 }
 
+const PAGE_SIZE = 50
+
 export default function ActivityLog() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
 
-  const [logs, setLogs]         = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [teams, setTeams]       = useState([])
+  const [logs, setLogs]             = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore]       = useState(false)
+  const [skip, setSkip]             = useState(0)
+  const [teams, setTeams]           = useState([])
 
   // Filters
   const [fromDate, setFromDate] = useState('')
@@ -55,19 +60,39 @@ export default function ActivityLog() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = React.useRef(null)
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true)
-    const params = {}
+  const buildParams = useCallback(() => {
+    const params = { limit: PAGE_SIZE }
     if (fromDate)         params.from_date = fromDate
     if (toDate)           params.to_date   = toDate
     if (teamId)           params.team_id   = teamId
     if (selectedUser?.id) params.user_id   = selectedUser.id
-    try {
-      const { data } = await getActivityLogs(params)
-      setLogs(data || [])
-    } catch { setLogs([]) }
-    finally { setLoading(false) }
+    return params
   }, [fromDate, toDate, teamId, selectedUser])
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true)
+    setSkip(0)
+    try {
+      const { data } = await getActivityLogs({ ...buildParams(), skip: 0 })
+      const results = data || []
+      setLogs(results)
+      setHasMore(results.length === PAGE_SIZE)
+    } catch { setLogs([]); setHasMore(false) }
+    finally { setLoading(false) }
+  }, [buildParams])
+
+  const loadMore = useCallback(async () => {
+    const nextSkip = skip + PAGE_SIZE
+    setLoadingMore(true)
+    try {
+      const { data } = await getActivityLogs({ ...buildParams(), skip: nextSkip })
+      const results = data || []
+      setLogs(prev => [...prev, ...results])
+      setSkip(nextSkip)
+      setHasMore(results.length === PAGE_SIZE)
+    } catch {}
+    finally { setLoadingMore(false) }
+  }, [skip, buildParams])
 
   useEffect(() => { fetchLogs() }, [fetchLogs])
   useEffect(() => { getTeams().then(({ data }) => setTeams(data || [])).catch(() => {}) }, [])
@@ -97,7 +122,7 @@ export default function ActivityLog() {
         <div>
           <div className="page-heading">Activity Log</div>
           <div className="page-subheading">
-            {loading ? 'Loading…' : `${logs.length} event${logs.length !== 1 ? 's' : ''}`}
+            {loading ? 'Loading…' : `${logs.length} event${logs.length !== 1 ? 's' : ''}${hasMore ? '+' : ''}`}
           </div>
         </div>
       </div>
@@ -268,6 +293,17 @@ export default function ActivityLog() {
             </tbody>
           </table>
         </div>
+        {hasMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Loading…' : 'Load More'}
+            </button>
+          </div>
+        )}
       )}
     </>
   )
