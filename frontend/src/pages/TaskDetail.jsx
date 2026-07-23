@@ -12,16 +12,14 @@ import { useToast } from '../contexts/ToastContext'
 
 function formatDate(d, includeTime = false) {
   if (!d) return '—'
-  const opts = { month: 'short', day: 'numeric', year: 'numeric' }
+  const opts = { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }
   if (includeTime) { opts.hour = '2-digit'; opts.minute = '2-digit' }
   return new Date(d).toLocaleDateString('en-US', opts)
 }
 
 function toInputDate(d) {
   if (!d) return ''
-  const dt = new Date(d)
-  const pad = n => String(n).padStart(2, '0')
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  return new Date(d).toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).slice(0, 16).replace(' ', 'T')
 }
 
 function dueLabel(due, status) {
@@ -176,8 +174,8 @@ export default function TaskDetail() {
       const payload = {
         title:       editForm.title,
         description: editForm.description || null,
-        due_date:    editForm.due_date,
-        start_date:  editForm.start_date || null,
+        due_date:    new Date(editForm.due_date).toISOString(),
+        start_date:  editForm.start_date ? new Date(editForm.start_date).toISOString() : null,
         bank_ids:    editForm.bank_ids,
       }
       await updateTask(id, payload)

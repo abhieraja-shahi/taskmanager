@@ -11,7 +11,7 @@ const STATUS_LABELS = {
 
 function formatDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
+  return new Date(d).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: '2-digit' })
 }
 
 function dueClass(due, status) {
@@ -220,7 +220,7 @@ export default function Tasks() {
         assignments: g.assignments.filter((a) => {
           if (userStatusFilter !== 'all' && a.status !== userStatusFilter) return false
           if (userCreatedFrom && a.task?.created_at) {
-            if (new Date(a.task.created_at) < new Date(userCreatedFrom)) return false
+            if (new Date(a.task.created_at) < new Date(userCreatedFrom + 'T00:00:00')) return false
           }
           if (userCreatedTo && a.task?.created_at) {
             if (new Date(a.task.created_at) > new Date(userCreatedTo + 'T23:59:59')) return false
@@ -250,7 +250,7 @@ export default function Tasks() {
         tasks: g.tasks.filter((t) => {
           if (managerStatusFilter !== 'all' && t.status !== managerStatusFilter) return false
           if (managerDueFrom && t.due_date) {
-            if (new Date(t.due_date) < new Date(managerDueFrom)) return false
+            if (new Date(t.due_date) < new Date(managerDueFrom + 'T00:00:00')) return false
           }
           if (managerDueTo && t.due_date) {
             if (new Date(t.due_date) > new Date(managerDueTo + 'T23:59:59')) return false

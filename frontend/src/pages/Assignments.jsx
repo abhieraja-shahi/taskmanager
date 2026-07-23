@@ -6,7 +6,7 @@ import { useToast } from '../contexts/ToastContext'
 
 function formatDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function dueClass(due, taskStatus) {

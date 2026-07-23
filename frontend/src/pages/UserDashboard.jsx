@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 function formatDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function isOverdue(due) {

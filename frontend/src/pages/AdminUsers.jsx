@@ -116,7 +116,7 @@ export default function AdminUsers() {
                   </span>
                 </td>
                 <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>
-                  {new Date(u.created_at).toLocaleDateString()}
+                  {new Date(u.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                   {u.id !== me?.id && u.role !== 'admin' && u.is_active && (
