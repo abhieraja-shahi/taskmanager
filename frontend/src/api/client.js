@@ -28,6 +28,7 @@ export const deleteUser = (userId) => api.delete(`/auth/users/${userId}`)
 export const getUsers = () => api.get('/auth/users')
 export const searchUsers = (q) => api.get('/auth/users/search', { params: { q } })
 export const changePassword = (data) => api.post('/auth/change-password', data)
+export const adminResetPassword = (userId, newPassword) => api.put(`/auth/users/${userId}/password`, { new_password: newPassword })
 
 /* ─── Tasks ─────────────────────────────────────────────────────────── */
 export const getTasks = (params) => api.get('/tasks/', { params })

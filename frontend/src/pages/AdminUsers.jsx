@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getUsers, updateUserRole, deleteUser } from '../api/client'
+import { getUsers, updateUserRole, deleteUser, adminResetPassword } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import Modal from '../components/Modal'
 
 export default function AdminUsers() {
   const { user: me } = useAuth()
@@ -12,6 +13,9 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(null) // user id being updated
   const [deleting, setDeleting] = useState(null) // user id being deleted
+  const [resetTarget, setResetTarget] = useState(null) // user object for reset modal
+  const [newPassword, setNewPassword] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     getUsers()
@@ -30,6 +34,22 @@ export default function AdminUsers() {
       toast.error('Failed to update role')
     } finally {
       setUpdating(null)
+    }
+  }
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+    if (!newPassword) return
+    setResetting(true)
+    try {
+      await adminResetPassword(resetTarget.id, newPassword)
+      toast.success(`Password reset for ${resetTarget.username}`)
+      setResetTarget(null)
+      setNewPassword('')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to reset password')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -119,21 +139,58 @@ export default function AdminUsers() {
                   {new Date(u.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  {u.id !== me?.id && u.role !== 'admin' && u.is_active && (
-                    <button
-                      className="btn btn-danger btn-sm"
-                      disabled={deleting === u.id}
-                      onClick={() => handleDeleteUser(u)}
-                    >
-                      {deleting === u.id ? '…' : 'Deactivate'}
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    {u.id !== me?.id && u.role !== 'admin' && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => { setResetTarget(u); setNewPassword('') }}
+                      >
+                        Reset Password
+                      </button>
+                    )}
+                    {u.id !== me?.id && u.role !== 'admin' && u.is_active && (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        disabled={deleting === u.id}
+                        onClick={() => handleDeleteUser(u)}
+                      >
+                        {deleting === u.id ? '…' : 'Deactivate'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {resetTarget && (
+        <Modal title={`Reset password — ${resetTarget.username}`} onClose={() => setResetTarget(null)}>
+          <form onSubmit={handleResetPassword}>
+            <div className="form-group">
+              <label className="form-label">New Password</label>
+              <input
+                className="form-control"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                autoFocus
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setResetTarget(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={resetting || !newPassword}>
+                {resetting ? 'Resetting…' : 'Reset Password'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   )
 }
