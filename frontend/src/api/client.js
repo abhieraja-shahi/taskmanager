@@ -8,8 +8,25 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// MySQL returns naive datetimes (no timezone). Pydantic serialises them without
+// a 'Z' suffix, so the browser treats them as local time instead of UTC.
+// This interceptor appends 'Z' to any bare ISO datetime string in the response.
+function markUTC(obj) {
+  if (obj === null || obj === undefined || typeof obj === 'boolean' || typeof obj === 'number') return obj
+  if (typeof obj === 'string') {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(obj) ? obj + 'Z' : obj
+  }
+  if (Array.isArray(obj)) return obj.map(markUTC)
+  if (typeof obj === 'object') {
+    const out = {}
+    for (const k of Object.keys(obj)) out[k] = markUTC(obj[k])
+    return out
+  }
+  return obj
+}
+
 api.interceptors.response.use(
-  (res) => res,
+  (res) => { res.data = markUTC(res.data); return res },
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
