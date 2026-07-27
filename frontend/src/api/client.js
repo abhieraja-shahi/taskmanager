@@ -63,7 +63,7 @@ export const getTaskActivity = (id) => api.get(`/tasks/${id}/activity`)
 
 /* ─── Dashboard ─────────────────────────────────────────────────────── */
 export const getManagerDashboard = (params) => api.get('/dashboard/manager', { params })
-export const getUserDashboard = () => api.get('/dashboard/user')
+export const getUserDashboard = (params) => api.get('/dashboard/user', { params })
 
 /* ─── Teams ─────────────────────────────────────────────────────────── */
 export const getTeams = () => api.get('/teams/')

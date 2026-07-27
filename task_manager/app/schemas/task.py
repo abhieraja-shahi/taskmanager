@@ -172,3 +172,15 @@ class TaskSummaryResponse(BaseModel):
     assignments: List[AssignmentResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class PaginatedTaskResponse(BaseModel):
+    items: List[TaskSummaryResponse]
+    total: int
+
+
+class ManagerDashboardResponse(PaginatedTaskResponse):
+    active_count: int = 0
+    in_progress_count: int = 0
+    pending_count: int = 0
+    overdue_count: int = 0

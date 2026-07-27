@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getUserDashboard, getTask, acceptTask, rejectTask, completeTask } from '../api/client'
+import { getUserDashboard, acceptTask, rejectTask, completeTask } from '../api/client'
 import StatusBadge from '../components/StatusBadge'
+import Pagination from '../components/Pagination'
 import { useToast } from '../contexts/ToastContext'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -68,23 +69,27 @@ function TaskRow({ task, onAction }) {
   )
 }
 
+const PAGE_SIZE = 25
+
 export default function UserDashboard() {
   const toast = useToast()
   const { user } = useAuth()
   const [tasks, setTasks]       = useState([])
+  const [total, setTotal]       = useState(0)
   const [loading, setLoading]   = useState(true)
   const [rejectModal, setRejectModal] = useState(null)
   const [reason, setReason]     = useState('')
+  const [page, setPage]         = useState(1)
 
-  const load = () => {
+  const load = (p = page) => {
     setLoading(true)
-    getUserDashboard()
-      .then(({ data }) => setTasks(data || []))
+    getUserDashboard({ skip: (p - 1) * PAGE_SIZE, limit: PAGE_SIZE })
+      .then(({ data }) => { setTasks(data.items || []); setTotal(data.total || 0) })
       .catch(() => toast.error('Failed to load dashboard'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(page) }, [page])
 
   const handleAction = async (action, taskId) => {
     if (action === 'reject') { setRejectModal({ taskId }); return }
@@ -92,7 +97,7 @@ export default function UserDashboard() {
       if (action === 'accept')   await acceptTask(taskId)
       if (action === 'complete') await completeTask(taskId)
       toast.success(action === 'accept' ? 'Task accepted.' : 'Marked as ready for review.')
-      load()
+      load(page)
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Action failed')
     }
@@ -104,7 +109,7 @@ export default function UserDashboard() {
       await rejectTask(rejectModal.taskId, { reason })
       toast.success('Task declined.')
       setRejectModal(null); setReason('')
-      load()
+      load(page)
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to decline')
     }
@@ -112,6 +117,7 @@ export default function UserDashboard() {
 
   const overdue = tasks.filter((t) => isOverdue(t.due_date))
   const active  = tasks.filter((t) => !isOverdue(t.due_date))
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <>
@@ -173,6 +179,7 @@ export default function UserDashboard() {
               ))}
             </div>
           )}
+          <Pagination page={page} totalPages={totalPages} totalItems={total} pageSize={PAGE_SIZE} onPage={setPage} />
         </>
       )}
 

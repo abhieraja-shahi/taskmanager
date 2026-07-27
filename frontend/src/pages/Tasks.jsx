@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getTasks, getAllAssignments } from '../api/client'
 import StatusBadge from '../components/StatusBadge'
+import Pagination from '../components/Pagination'
 
 const STATUSES = ['all', 'pending_acceptance', 'in_progress', 'under_review', 'approved', 'rejected']
 const STATUS_LABELS = {
@@ -127,12 +128,17 @@ function IconManager() {
   )
 }
 
+const PAGE_SIZE = 25
+const GROUP_PAGE_SIZE = 10
+
 export default function Tasks() {
   const navigate  = useNavigate()
   const location  = useLocation()
 
   // Task view state
   const [tasks, setTasks]         = useState([])
+  const [tasksTotal, setTasksTotal] = useState(0)
+  const [taskPage, setTaskPage]   = useState(1)
   const [loading, setLoading]     = useState(true)
   const [statusFilter, setStatus] = useState('all')
   const [search, setSearch]       = useState('')
@@ -142,6 +148,10 @@ export default function Tasks() {
 
   // View mode: 'tasks' | 'users' | 'managers'
   const [viewMode, setViewMode]   = useState('tasks')
+
+  // Group view pagination
+  const [userPage, setUserPage]       = useState(1)
+  const [managerPage, setManagerPage] = useState(1)
 
   // User view state
   const [allAssignments, setAllAssignments] = useState([])
@@ -164,16 +174,16 @@ export default function Tasks() {
   // ── Load task view ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (viewMode !== 'tasks') return
-    const params = {}
+    const params = { skip: (taskPage - 1) * PAGE_SIZE, limit: PAGE_SIZE }
     if (statusFilter !== 'all') params.status = statusFilter
     if (dueFrom) params.due_from = dueFrom
     if (dueTo)   params.due_to   = dueTo
     setLoading(true)
     getTasks(params)
-      .then(({ data }) => setTasks(data || []))
+      .then(({ data }) => { setTasks(data.items || []); setTasksTotal(data.total || 0) })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [viewMode, statusFilter, dueFrom, dueTo, location.key])
+  }, [viewMode, statusFilter, dueFrom, dueTo, taskPage, location.key])
 
   // ── Load user view ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -195,16 +205,17 @@ export default function Tasks() {
       .finally(() => setManagerViewLoading(false))
   }, [viewMode, location.key])
 
-  // ── Task view filtering ─────────────────────────────────────────────────────
+  // ── Task view filtering (local: search + overdue; server handles status/dates) ──
   const filtered = tasks.filter((t) => {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase()) &&
-        !(t.description || '').toLowerCase().includes(search.toLowerCase())) return false
+        !(t.description || '').replace(/<[^>]*>/g, '').toLowerCase().includes(search.toLowerCase())) return false
     if (overdueOnly) {
       if (['approved', 'rejected'].includes(t.status)) return false
       if (!t.due_date || new Date(t.due_date) >= Date.now()) return false
     }
     return true
   })
+  const taskTotalPages = Math.ceil(tasksTotal / PAGE_SIZE)
 
   // ── User view grouping ──────────────────────────────────────────────────────
   const groupedByUser = useMemo(() => {
@@ -266,10 +277,16 @@ export default function Tasks() {
       .sort((a, b) => (a.creator?.username || '').localeCompare(b.creator?.username || ''))
   }, [managerTasks, managerSearch, managerStatusFilter, managerDueFrom, managerDueTo])
 
+  // ── Paginated slices for group views ───────────────────────────────────────
+  const pagedUsers    = groupedByUser.slice((userPage - 1) * GROUP_PAGE_SIZE, userPage * GROUP_PAGE_SIZE)
+  const pagedManagers = groupedByManager.slice((managerPage - 1) * GROUP_PAGE_SIZE, managerPage * GROUP_PAGE_SIZE)
+  const userTotalPages    = Math.ceil(groupedByUser.length / GROUP_PAGE_SIZE)
+  const managerTotalPages = Math.ceil(groupedByManager.length / GROUP_PAGE_SIZE)
+
   const toggleCollapse = (uid) => setCollapsed((prev) => ({ ...prev, [uid]: !prev[uid] }))
   const toggleManagerCollapse = (mid) => setManagerCollapsed((prev) => ({ ...prev, [mid]: !prev[mid] }))
 
-  const clearDates = () => { setDueFrom(''); setDueTo('') }
+  const clearDates = () => { setDueFrom(''); setDueTo(''); setTaskPage(1) }
 
   const switchView = (mode) => {
     setViewMode(mode)
@@ -282,6 +299,9 @@ export default function Tasks() {
     setManagerStatus('all')
     setManagerDueFrom('')
     setManagerDueTo('')
+    setTaskPage(1)
+    setUserPage(1)
+    setManagerPage(1)
   }
 
   // ── View toggle control ─────────────────────────────────────────────────────
@@ -345,7 +365,7 @@ export default function Tasks() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {groupedByUser.map(({ user, assignments }) => {
+        {pagedUsers.map(({ user, assignments }) => {
           const uid = user?.id ?? 0
           const isCollapsed = collapsed[uid]
           const pendingCount = assignments.filter((a) => a.status === 'pending').length
@@ -454,6 +474,7 @@ export default function Tasks() {
             </div>
           )
         })}
+        <Pagination page={userPage} totalPages={userTotalPages} totalItems={groupedByUser.length} pageSize={GROUP_PAGE_SIZE} onPage={setUserPage} />
       </div>
     )
   }
@@ -474,7 +495,7 @@ export default function Tasks() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {groupedByManager.map(({ creator, tasks: mgrTasks }) => {
+        {pagedManagers.map(({ creator, tasks: mgrTasks }) => {
           const mid = creator?.id ?? 0
           const isCollapsed = managerCollapsed[mid]
           const pendingCount = mgrTasks.filter((t) => t.status === 'pending_acceptance').length
@@ -600,6 +621,7 @@ export default function Tasks() {
             </div>
           )
         })}
+        <Pagination page={managerPage} totalPages={managerTotalPages} totalItems={groupedByManager.length} pageSize={GROUP_PAGE_SIZE} onPage={setManagerPage} />
       </div>
     )
   }
@@ -612,7 +634,7 @@ export default function Tasks() {
           <div className="page-heading">Tasks</div>
           <div className="page-subheading">
             {viewMode === 'tasks'
-              ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''} total`
+              ? `${tasksTotal} task${tasksTotal !== 1 ? 's' : ''} total`
               : viewMode === 'users'
               ? `${groupedByUser.length} user${groupedByUser.length !== 1 ? 's' : ''} · ${allAssignments.length} assignment${allAssignments.length !== 1 ? 's' : ''}`
               : `${groupedByManager.length} manager${groupedByManager.length !== 1 ? 's' : ''} · ${managerTasks.length} task${managerTasks.length !== 1 ? 's' : ''}`}
@@ -716,7 +738,7 @@ export default function Tasks() {
             style={overdueOnly
               ? { background: 'var(--color-red-dim)', borderColor: 'rgba(220,38,38,0.35)', color: 'var(--color-red)' }
               : {}}
-            onClick={() => setOverdueOnly((v) => !v)}
+            onClick={() => { setOverdueOnly((v) => !v); setTaskPage(1) }}
           >
             Overdue
           </button>
@@ -724,7 +746,7 @@ export default function Tasks() {
             <button
               key={s}
               className={`filter-pill${statusFilter === s ? ' active' : ''}`}
-              onClick={() => setStatus(s)}
+              onClick={() => { setStatus(s); setTaskPage(1) }}
             >
               {STATUS_LABELS[s]}
             </button>
@@ -895,53 +917,56 @@ export default function Tasks() {
             <div className="empty-sub">{search ? 'No results match your search.' : 'Create a task to get started.'}</div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Assignees</th>
-                  <th>Due Date</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((task) => (
-                  <tr key={task.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/tasks/${task.id}`)}>
-                    <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)', width: 48 }}>
-                      #{task.id}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 500, color: 'var(--text-bright)' }}>{task.title}</div>
-                      {task.description && (
-                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.description}
-                        </div>
-                      )}
-                    </td>
-                    <td><StatusBadge status={task.status} /></td>
-                    <td>
-                      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                        {task.assignments?.length
-                          ? task.assignments.map((a) => a.user?.username).filter(Boolean).join(', ') || '—'
-                          : '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={dueClass(task.due_date, task.status)} style={{ fontSize: 11 }}>
-                        {formatDate(task.due_date)}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                      {formatDate(task.created_at)}
-                    </td>
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Assignees</th>
+                    <th>Due Date</th>
+                    <th>Created</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map((task) => (
+                    <tr key={task.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/tasks/${task.id}`)}>
+                      <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)', width: 48 }}>
+                        #{task.id}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 500, color: 'var(--text-bright)' }}>{task.title}</div>
+                        {task.description && (
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.description.replace(/<[^>]*>/g, '')}
+                          </div>
+                        )}
+                      </td>
+                      <td><StatusBadge status={task.status} /></td>
+                      <td>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                          {task.assignments?.length
+                            ? task.assignments.map((a) => a.user?.username).filter(Boolean).join(', ') || '—'
+                            : '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={dueClass(task.due_date, task.status)} style={{ fontSize: 11 }}>
+                          {formatDate(task.due_date)}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                        {formatDate(task.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination page={taskPage} totalPages={taskTotalPages} totalItems={tasksTotal} pageSize={PAGE_SIZE} onPage={setTaskPage} />
+          </>
         )
       ) : viewMode === 'users' ? renderUserView() : renderManagerView()}
     </>

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,6 +18,7 @@ from app.schemas.task import (
     ActivityLogWithUserResponse,
     CommentResponse,
     CommentSchema,
+    PaginatedTaskResponse,
     RejectSchema,
     ReassignSchema,
     ReviewSchema,
@@ -43,11 +44,13 @@ async def create_task(
     return await _service.create_task(db, data, creator=user)
 
 
-@router.get("/", response_model=List[TaskSummaryResponse])
+@router.get("/", response_model=PaginatedTaskResponse)
 async def list_tasks(
     status: Optional[str] = Query(None),
     due_from: Optional[date] = Query(None, description="Filter by due date on or after"),
     due_to: Optional[date] = Query(None, description="Filter by due date on or before"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_manager),
 ):
@@ -72,9 +75,10 @@ async def list_tasks(
     if due_to:
         query = query.where(Task.due_date <= datetime.combine(due_to, datetime.max.time()))
 
-    query = query.order_by(Task.created_at.desc())
-    result = await db.execute(query)
-    return result.scalars().all()
+    base_q = query.order_by(Task.created_at.desc())
+    total = (await db.execute(select(func.count()).select_from(base_q.subquery()))).scalar_one()
+    items = (await db.execute(base_q.offset(skip).limit(limit))).scalars().all()
+    return PaginatedTaskResponse(items=items, total=total)
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
