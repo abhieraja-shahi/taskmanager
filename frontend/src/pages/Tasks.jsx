@@ -199,8 +199,8 @@ export default function Tasks() {
   useEffect(() => {
     if (viewMode !== 'managers') return
     setManagerViewLoading(true)
-    getTasks()
-      .then(({ data }) => setManagerTasks(data || []))
+    getTasks({ limit: 1000 })
+      .then(({ data }) => setManagerTasks(data.items || []))
       .catch(() => {})
       .finally(() => setManagerViewLoading(false))
   }, [viewMode, location.key])
