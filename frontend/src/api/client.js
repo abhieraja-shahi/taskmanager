@@ -119,6 +119,7 @@ export const deleteDeployment = (id) => api.delete(`/deployments/${id}`)
 
 /* ─── Zammad Tickets ─────────────────────────────────────────────────── */
 export const getZammadTickets    = (params)   => api.get('/zammad/tickets', { params })  // params: { state, page, page_size }
+export const locateZammadTicket  = (ticketId, pageSize) => api.get(`/zammad/tickets/locate/${ticketId}`, { params: { page_size: pageSize } })
 export const getTicketTasks      = (ticketId) => api.get(`/zammad/tickets/${ticketId}/tasks`)
 export const getTicketArticles   = (ticketId) => api.get(`/zammad/tickets/${ticketId}/articles`)
 export const resolveZammadTicket = (ticketId) => api.patch(`/zammad/tickets/${ticketId}/resolve`)

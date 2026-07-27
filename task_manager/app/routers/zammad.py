@@ -90,6 +90,29 @@ async def list_zammad_tickets(
     return ZammadTicketsPage(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
 
+@router.get("/tickets/locate/{ticket_id}")
+async def locate_ticket_page(
+    ticket_id: int,
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_manager),
+):
+    """Return the page number on which the given ticket appears (ordered by created_at DESC)."""
+    ticket_result = await db.execute(
+        select(ZammadTicket).where(ZammadTicket.ticket_id == ticket_id)
+    )
+    ticket = ticket_result.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    count_result = await db.execute(
+        select(func.count()).select_from(ZammadTicket).where(ZammadTicket.created_at > ticket.created_at)
+    )
+    position = count_result.scalar_one()
+    page = (position // page_size) + 1
+    return {"page": page}
+
+
 @router.get("/tickets/{ticket_id}/tasks", response_model=List[TaskSummaryResponse])
 async def list_tasks_for_ticket(
     ticket_id: int,

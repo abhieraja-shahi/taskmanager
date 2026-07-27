@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
+import { getZammadTickets, locateZammadTicket, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 
 const PRIORITY_COLORS = {
@@ -272,6 +272,7 @@ export default function ZammadTickets() {
   const [resolving, setResolving]     = useState(null)
   const debounceRef                   = useRef(null)
   const expandTicketId                = location.state?.expandTicketId ?? null
+  const [locating, setLocating]       = useState(!!expandTicketId)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -297,7 +298,16 @@ export default function ZammadTickets() {
     }
   }, [stateFilter, search, page, expandTicketId])
 
-  useEffect(() => { load() }, [load])
+  // When arriving via a linked ticket, locate its page before loading
+  useEffect(() => {
+    if (!expandTicketId) return
+    locateZammadTicket(expandTicketId, PAGE_SIZE)
+      .then(({ data }) => setPage(data.page))
+      .catch(() => {})
+      .finally(() => setLocating(false))
+  }, [expandTicketId])
+
+  useEffect(() => { if (!locating) load() }, [load, locating])
 
   const handleFilterChange = (key) => {
     setStateFilter(key)
