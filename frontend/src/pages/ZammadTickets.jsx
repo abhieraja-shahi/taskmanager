@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { getZammadTickets, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -258,6 +258,7 @@ const PAGE_SIZE = 20
 
 export default function ZammadTickets() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isManager } = useAuth()
   const [tickets, setTickets]         = useState([])
   const [total, setTotal]             = useState(0)
@@ -270,6 +271,7 @@ export default function ZammadTickets() {
   const [expanded, setExpanded]       = useState(null)
   const [resolving, setResolving]     = useState(null)
   const debounceRef                   = useRef(null)
+  const expandTicketId                = location.state?.expandTicketId ?? null
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -278,9 +280,14 @@ export default function ZammadTickets() {
       if (stateFilter) params.state = stateFilter
       if (search) params.search = search
       const { data } = await getZammadTickets(params)
-      setTickets(Array.isArray(data.items) ? data.items : [])
+      const items = Array.isArray(data.items) ? data.items : []
+      setTickets(items)
       setTotal(data.total ?? 0)
       setPages(data.pages ?? 1)
+      if (expandTicketId) {
+        const match = items.find((t) => t.ticket_id === expandTicketId)
+        if (match) setExpanded(match.id)
+      }
     } catch {
       setTickets([])
       setTotal(0)
@@ -288,7 +295,7 @@ export default function ZammadTickets() {
     } finally {
       setLoading(false)
     }
-  }, [stateFilter, search, page])
+  }, [stateFilter, search, page, expandTicketId])
 
   useEffect(() => { load() }, [load])
 

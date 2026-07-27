@@ -375,7 +375,7 @@ export default function TaskDetail() {
                     display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                     border: '1px solid var(--color-cyan)',
                   }}
-                  onClick={() => navigate('/tickets/zammad')}
+                  onClick={() => navigate('/tickets/zammad', { state: { expandTicketId: task.zammad_ticket_id } })}
                   title="View in Support Tickets"
                 >
                   {linkedTicket ? (
