@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createTask, getTeams, getUsers, getZammadTickets, getBanks, uploadTaskAttachment } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import RichTextEditor from '../components/RichTextEditor'
 
 export default function CreateTask() {
   const navigate = useNavigate()
@@ -179,12 +180,11 @@ export default function CreateTask() {
 
                 <div className="form-group">
                   <label className="form-label">Description</label>
-                  <textarea
-                    className="form-control"
-                    placeholder="Detailed description, acceptance criteria, notes…"
+                  <RichTextEditor
                     value={form.description}
-                    onChange={set('description')}
-                    rows={4}
+                    onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+                    placeholder="Detailed description, acceptance criteria, notes…"
+                    minHeight={100}
                   />
                 </div>
 

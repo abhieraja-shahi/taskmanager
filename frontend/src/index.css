@@ -555,6 +555,102 @@ textarea.form-control {
   margin-top: 4px;
 }
 
+/* ─── Rich Text Editor ────────────────────────────────────────────────────── */
+.rich-editor-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  transition: var(--transition);
+}
+.rich-editor-wrap:focus-within {
+  border-color: #191e5c;
+  box-shadow: 0 0 0 3px rgba(25, 30, 92, 0.08);
+}
+.rich-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  flex-wrap: wrap;
+}
+.rich-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-body);
+  transition: var(--transition);
+}
+.rich-toolbar-btn:hover { background: var(--bg-elevated); color: var(--text-bright); }
+.rich-toolbar-btn.active {
+  background: var(--color-primary-dim);
+  color: var(--color-primary);
+  border-color: var(--border-strong);
+}
+.rich-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.rich-color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.rich-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: var(--transition);
+}
+.rich-color-dot:hover, .rich-color-dot.active {
+  border-color: var(--text-primary);
+  transform: scale(1.2);
+}
+.rich-color-picker-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.rich-editor-content {
+  padding: 9px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+}
+.rich-editor-content p { margin: 0; }
+.rich-editor-content p + p { margin-top: 0.4em; }
+
+/* Rendered rich text in display areas */
+.rich-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+.rich-content p { margin: 0; }
+.rich-content p + p { margin-top: 0.4em; }
+.rich-content strong { font-weight: 700; }
+.rich-content em { font-style: italic; }
+.rich-content u { text-decoration: underline; }
+
 /* ─── Tables ─────────────────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;

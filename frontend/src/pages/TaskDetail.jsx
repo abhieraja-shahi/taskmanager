@@ -7,6 +7,7 @@ import {
   getTaskAttachments, uploadTaskAttachment, downloadAttachment, deleteAttachment,
 } from '../api/client'
 import StatusBadge from '../components/StatusBadge'
+import RichTextEditor from '../components/RichTextEditor'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -136,8 +137,10 @@ export default function TaskDetail() {
     } catch (e) { toast.error(e.response?.data?.detail || 'Failed') }
   }
 
+  const isRichTextEmpty = (html) => !html || html.replace(/<[^>]*>/g, '').trim() === ''
+
   const handleComment = async () => {
-    if (!commentText.trim()) return
+    if (isRichTextEmpty(commentText)) return
     setSubmitting(true)
     try {
       const { data } = await addComment(id, { content: commentText })
@@ -325,7 +328,7 @@ export default function TaskDetail() {
           <div>
             <div className="section-label">Description</div>
             {task.description ? (
-              <div className="desc-block">{task.description}</div>
+              <div className="desc-block rich-content" dangerouslySetInnerHTML={{ __html: task.description }} />
             ) : (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
                 No description provided.
@@ -538,18 +541,17 @@ export default function TaskDetail() {
         <div>
           <div style={{ marginBottom: 20 }}>
             <div className="form-group">
-              <textarea
-                className="form-control"
-                placeholder="Add a comment…"
+              <RichTextEditor
                 value={commentText}
-                onChange={(e) => setComment(e.target.value)}
-                rows={3}
+                onChange={setComment}
+                placeholder="Add a comment…"
+                minHeight={80}
               />
             </div>
             <button
               className="btn btn-primary btn-sm"
               onClick={handleComment}
-              disabled={submitting || !commentText.trim()}
+              disabled={submitting || isRichTextEmpty(commentText)}
             >
               {submitting ? 'Posting…' : 'Post Comment'}
             </button>
@@ -570,7 +572,7 @@ export default function TaskDetail() {
                       <span className="comment-author">{c.user?.username || `User #${c.user_id}`}</span>
                       <span className="comment-time">{formatDate(c.created_at, true)}</span>
                     </div>
-                    <div className="comment-text">{c.content}</div>
+                    <div className="comment-text rich-content" dangerouslySetInnerHTML={{ __html: c.content }} />
                   </div>
                 </div>
               ))}
@@ -675,11 +677,10 @@ export default function TaskDetail() {
             </div>
             <div className="form-group">
               <label className="form-label">Description</label>
-              <textarea
-                className="form-control"
+              <RichTextEditor
                 value={editForm.description}
-                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                rows={4}
+                onChange={(html) => setEditForm((f) => ({ ...f, description: html }))}
+                minHeight={100}
               />
             </div>
             <div className="form-group">
