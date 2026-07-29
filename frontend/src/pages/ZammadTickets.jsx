@@ -186,7 +186,7 @@ function ReplyComposer({ ticketId, onNoteSent }) {
   )
 }
 
-function LinkedTasks({ ticketId }) {
+function LinkedTasks({ ticketId, ticketNumber }) {
   const navigate = useNavigate()
   const [tasks, setTasks]     = useState(null)
   const [loading, setLoading] = useState(true)
@@ -214,7 +214,7 @@ function LinkedTasks({ ticketId }) {
         <button
           className="btn btn-primary"
           style={{ fontSize: 11, padding: '3px 10px', height: 'auto' }}
-          onClick={() => navigate(`/tasks/new?ticketId=${ticketId}`)}
+          onClick={() => navigate(`/tasks/new?ticketId=${ticketId}&ticketNumber=${ticketNumber}`)}
         >
           + New Task
         </button>
@@ -470,7 +470,7 @@ export default function ZammadTickets() {
                         <button
                           className="btn btn-secondary"
                           style={{ fontSize: 11, padding: '3px 10px', height: 'auto', whiteSpace: 'nowrap' }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/tasks/new?ticketId=${t.ticket_id}`) }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/tasks/new?ticketId=${t.ticket_id}&ticketNumber=${t.number}`) }}
                         >
                           + New Task
                         </button>
@@ -493,7 +493,7 @@ export default function ZammadTickets() {
                       <td />
                       <td colSpan={7}>
                         <ArticleHistory ticketId={t.ticket_id} isResolved={RESOLVED_STATES.has((t.state || '').toLowerCase())} />
-                        <LinkedTasks ticketId={t.ticket_id} />
+                        <LinkedTasks ticketId={t.ticket_id} ticketNumber={t.number} />
                       </td>
                     </tr>
                   )}

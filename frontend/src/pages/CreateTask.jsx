@@ -71,10 +71,11 @@ export default function CreateTask() {
       }).catch(() => {})
     }
     getBanks().then(({ data }) => setAllBanks(data || [])).catch(() => {})
-    // Pre-link from URL param — fetch just that ticket by searching its ID
+    // Pre-link from URL param — search by ticket number (which the backend indexes)
     const preId = searchParams.get('ticketId')
-    if (preId) {
-      getZammadTickets({ search: preId, page_size: 20 }).then(({ data }) => {
+    const preNumber = searchParams.get('ticketNumber')
+    if (preId && preNumber) {
+      getZammadTickets({ search: preNumber, page_size: 20 }).then(({ data }) => {
         const tickets = Array.isArray(data?.items) ? data.items : []
         const found = tickets.find((t) => String(t.ticket_id) === String(preId))
         if (found) setLinkedTicket(found)
