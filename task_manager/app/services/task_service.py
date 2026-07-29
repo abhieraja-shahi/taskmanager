@@ -213,6 +213,21 @@ class TaskService:
             db.add(TaskAssignment(task_id=task_id, user_id=user_id))
             added_ids.append(user_id)
 
+        # If removing pending assignees left all remaining assignees completed, auto-transition
+        await db.flush()
+        if task.status == TaskStatus.IN_PROGRESS.value:
+            remaining = await db.execute(
+                select(TaskAssignment).where(
+                    TaskAssignment.task_id == task_id,
+                    TaskAssignment.status != AssignmentStatus.REJECTED.value,
+                )
+            )
+            active = remaining.scalars().all()
+            if active and all(a.status == AssignmentStatus.COMPLETED.value for a in active):
+                task.status = TaskStatus.UNDER_REVIEW.value
+                task.completed_at = datetime.now(timezone.utc)
+                await notify("UNDER_REVIEW", task, manager_ids=[task.created_by], db=db)
+
         await log_activity(db, task_id, manager.id, "TASK_REASSIGNED",
                            detail=f"Assignees updated: {len(new_ids)} assignee(s)")
         if added_ids:
