@@ -27,10 +27,11 @@ export default function CreateTask() {
   const [files, setFiles]               = useState([])
 
   // Ticket linking
-  const [allTickets, setAllTickets]       = useState([])
-  const [ticketSearch, setTicketSearch]   = useState('')
-  const [linkedTicket, setLinkedTicket]   = useState(null)
+  const [ticketResults, setTicketResults]   = useState([])
+  const [ticketSearch, setTicketSearch]     = useState('')
+  const [linkedTicket, setLinkedTicket]     = useState(null)
   const [ticketDropdown, setTicketDropdown] = useState(false)
+  const [ticketSearching, setTicketSearching] = useState(false)
 
   // For managers: which teams they manage
   const myTeams = isAdmin ? allTeams : allTeams.filter((t) => t.managers?.some((m) => m.user_id === user?.id))
@@ -70,17 +71,29 @@ export default function CreateTask() {
       }).catch(() => {})
     }
     getBanks().then(({ data }) => setAllBanks(data || [])).catch(() => {})
-    getZammadTickets({ page_size: 500 }).then(({ data }) => {
-      const tickets = Array.isArray(data?.items) ? data.items : []
-      setAllTickets(tickets)
-      // Pre-link from URL param
-      const preId = searchParams.get('ticketId')
-      if (preId) {
+    // Pre-link from URL param — fetch just that ticket by searching its ID
+    const preId = searchParams.get('ticketId')
+    if (preId) {
+      getZammadTickets({ search: preId, page_size: 20 }).then(({ data }) => {
+        const tickets = Array.isArray(data?.items) ? data.items : []
         const found = tickets.find((t) => String(t.ticket_id) === String(preId))
         if (found) setLinkedTicket(found)
-      }
-    }).catch(() => {})
+      }).catch(() => {})
+    }
   }, [isAdmin, searchParams])
+
+  // Debounced server-side ticket search
+  useEffect(() => {
+    if (!ticketSearch.trim()) { setTicketResults([]); return }
+    const timer = setTimeout(() => {
+      setTicketSearching(true)
+      getZammadTickets({ search: ticketSearch.trim(), page_size: 20 })
+        .then(({ data }) => setTicketResults(Array.isArray(data?.items) ? data.items : []))
+        .catch(() => setTicketResults([]))
+        .finally(() => setTicketSearching(false))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [ticketSearch])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -125,15 +138,6 @@ export default function CreateTask() {
       setLoading(false)
     }
   }
-
-  const filteredTickets = allTickets.filter((t) => {
-    if (!ticketSearch) return true
-    const q = ticketSearch.toLowerCase()
-    return (
-      t.title.toLowerCase().includes(q) ||
-      t.number.toLowerCase().includes(q)
-    )
-  }).slice(0, 10)
 
   const filteredBanks = allBanks.filter((b) =>
     !bankSearch || b.name.toLowerCase().includes(bankSearch.toLowerCase())
@@ -364,7 +368,7 @@ export default function CreateTask() {
                         onFocus={() => setTicketDropdown(true)}
                         onBlur={() => setTimeout(() => setTicketDropdown(false), 150)}
                       />
-                      {ticketDropdown && allTickets.length > 0 && (
+                      {ticketDropdown && ticketSearch.trim() && (
                         <div style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
                           background: 'var(--bg-base)', border: '1px solid var(--border)',
@@ -372,9 +376,11 @@ export default function CreateTask() {
                           maxHeight: 220, overflowY: 'auto',
                           boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
                         }}>
-                          {filteredTickets.length === 0 ? (
+                          {ticketSearching ? (
+                            <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>Searching…</div>
+                          ) : ticketResults.length === 0 ? (
                             <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>No matching tickets</div>
-                          ) : filteredTickets.map((t) => (
+                          ) : ticketResults.map((t) => (
                             <div
                               key={t.id}
                               onMouseDown={() => { setLinkedTicket(t); setTicketSearch(''); setTicketDropdown(false) }}
