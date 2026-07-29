@@ -98,9 +98,9 @@ export default function TaskDetail() {
 
   useEffect(() => {
     if (!task?.zammad_ticket_id) { setLinkedTicket(null); return }
-    getZammadTickets()
+    getZammadTickets({ page_size: 500 })
       .then(({ data }) => {
-        const found = (data || []).find((t) => t.ticket_id === task.zammad_ticket_id)
+        const found = (data?.items || []).find((t) => t.ticket_id === task.zammad_ticket_id)
         setLinkedTicket(found || null)
       })
       .catch(() => {})

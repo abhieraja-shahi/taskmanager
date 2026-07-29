@@ -70,8 +70,8 @@ export default function CreateTask() {
       }).catch(() => {})
     }
     getBanks().then(({ data }) => setAllBanks(data || [])).catch(() => {})
-    getZammadTickets().then(({ data }) => {
-      const tickets = Array.isArray(data) ? data : []
+    getZammadTickets({ page_size: 500 }).then(({ data }) => {
+      const tickets = Array.isArray(data?.items) ? data.items : []
       setAllTickets(tickets)
       // Pre-link from URL param
       const preId = searchParams.get('ticketId')
