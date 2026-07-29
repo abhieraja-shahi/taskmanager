@@ -32,6 +32,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
+      return new Promise(() => {}) // prevent component catch handlers from firing during redirect
     }
     return Promise.reject(err)
   }
