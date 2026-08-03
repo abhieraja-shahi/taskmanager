@@ -26,7 +26,7 @@ function markUTC(obj) {
 }
 
 api.interceptors.response.use(
-  (res) => { res.data = markUTC(res.data); return res },
+  (res) => { if (res.config.responseType !== 'blob') res.data = markUTC(res.data); return res },
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
