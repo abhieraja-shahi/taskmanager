@@ -253,8 +253,16 @@ def _strip_html(text: str) -> str:
     # Remove BOM and 4-byte chars that MySQL utf8 (3-byte) can't store
     text = text.replace('\ufeff', '')
     text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
-    clean = re.sub(r"<[^>]+>", " ", text)
-    return re.sub(r"\s+", " ", clean).strip()
+    # Turn block/line-break tags into newlines before stripping the rest,
+    # so quoted email chains stay readable as separate lines/paragraphs
+    # instead of collapsing into one undifferentiated wall of text.
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</(p|div|tr|li|h[1-6])>", "\n", text)
+    clean = re.sub(r"<[^>]+>", "", text)
+    clean = re.sub(r"[ \t]+", " ", clean)
+    clean = re.sub(r" *\n *", "\n", clean)
+    clean = re.sub(r"\n{3,}", "\n\n", clean)
+    return clean.strip()
 
 
 async def _fetch_article_for_ticket(client: httpx.AsyncClient, zammad_ticket_id: int):
