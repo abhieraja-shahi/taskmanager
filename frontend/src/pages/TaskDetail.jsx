@@ -508,8 +508,10 @@ export default function TaskDetail() {
                         const a = document.createElement('a')
                         a.href = url
                         a.download = att.filename
+                        document.body.appendChild(a)
                         a.click()
-                        URL.revokeObjectURL(url)
+                        document.body.removeChild(a)
+                        setTimeout(() => URL.revokeObjectURL(url), 100)
                       } catch { toast.error('Download failed') }
                     }}
                   >
