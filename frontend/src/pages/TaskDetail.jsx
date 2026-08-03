@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  getTask, acceptTask, rejectTask, completeTask, reviewTask,
+  getTask, acceptTask, rejectTask, completeTask, reviewTask, reopenTask,
   getTaskComments, addComment, getTaskActivity,
   updateTask, reassignTask, getTeams, getZammadTickets, getBanks,
   getTaskAttachments, uploadTaskAttachment, downloadAttachment, deleteAttachment,
@@ -60,9 +60,11 @@ export default function TaskDetail() {
   const [reviewModal, setReviewModal]     = useState(false)
   const [editModal, setEditModal]         = useState(false)
   const [reassignModal, setReassignModal] = useState(false)
+  const [reopenModal, setReopenModal]     = useState(false)
   const [reason, setReason]               = useState('')
   const [reviewApproved, setReviewApp]    = useState(true)
   const [reviewComment, setReviewComment] = useState('')
+  const [reopenReason, setReopenReason]   = useState('')
 
   // Edit form
   const [editForm, setEditForm] = useState({ title: '', description: '', due_date: '', start_date: '', bank_ids: [] })
@@ -133,6 +135,15 @@ export default function TaskDetail() {
       await reviewTask(id, { approved: reviewApproved, comment: reviewComment || undefined })
       toast.success(reviewApproved ? 'Task marked as completed.' : 'Sent back for revision.')
       setReviewModal(false); setReviewApp(true); setReviewComment('')
+      loadAll()
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed') }
+  }
+
+  const handleReopen = async () => {
+    try {
+      await reopenTask(id, { reason: reopenReason || undefined })
+      toast.success('Task reopened.')
+      setReopenModal(false); setReopenReason('')
       loadAll()
     } catch (e) { toast.error(e.response?.data?.detail || 'Failed') }
   }
@@ -278,6 +289,10 @@ export default function TaskDetail() {
           {/* Manager review */}
           {isManager && task.status === 'under_review' && (
             <button className="btn btn-primary" onClick={() => setReviewModal(true)}>Review</button>
+          )}
+          {/* Manager reopen */}
+          {isManager && task.status === 'approved' && (
+            <button className="btn btn-secondary" onClick={() => setReopenModal(true)}>Reopen</button>
           )}
         </div>
       </div>
@@ -658,6 +673,26 @@ export default function TaskDetail() {
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setReviewModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleReview}>Submit Review</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REOPEN MODAL ── */}
+      {reopenModal && (
+        <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && setReopenModal(false)}>
+          <div className="modal">
+            <div className="modal-title">Reopen Task</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12 }}>
+              This will move the task back to in-progress and reset completed assignees so it can be reworked.
+            </div>
+            <div className="form-group">
+              <label className="form-label">Reason (optional)</label>
+              <textarea className="form-control" value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} rows={3} autoFocus />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => { setReopenModal(false); setReopenReason('') }}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleReopen}>Reopen</button>
             </div>
           </div>
         </div>

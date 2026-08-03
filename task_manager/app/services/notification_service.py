@@ -13,6 +13,7 @@ MESSAGES = {
     "UNDER_REVIEW": "Task '{title}' is ready for your review.",
     "APPROVED": "Task '{title}' has been approved by the manager.",
     "REVIEW_REJECTED": "Task '{title}' was sent back for rework. Comment: {comment}",
+    "REOPENED": "Task '{title}' was reopened by the manager. Reason: {reason}",
     "DUE_SOON": "Reminder: Task '{title}' is due within 24 hours.",
     "OVERDUE": "Alert: Task '{title}' is overdue.",
     "COMMENT_ADDED": "{commenter} commented on task '{title}': {snippet}",

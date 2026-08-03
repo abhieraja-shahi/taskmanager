@@ -362,6 +362,33 @@ class TaskService:
 
         return await self._load_task(db, task_id)
 
+    async def reopen_task(self, db: AsyncSession, task_id: int, manager_id: int, reason: str = None) -> Task:
+        task = await db.get(Task, task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status != TaskStatus.APPROVED.value:
+            raise HTTPException(status_code=400, detail="Only approved tasks can be reopened")
+
+        result = await db.execute(
+            select(TaskAssignment).where(TaskAssignment.task_id == task_id)
+        )
+        all_assignments = result.scalars().all()
+        assignee_ids = [a.user_id for a in all_assignments]
+
+        task.status = TaskStatus.IN_PROGRESS.value
+        task.completed_at = None
+        task.reviewed_by = None
+        for a in all_assignments:
+            if a.status == AssignmentStatus.COMPLETED.value:
+                a.status = AssignmentStatus.ACCEPTED.value
+                a.completed_at = None
+
+        await log_activity(db, task_id, manager_id, "TASK_REOPENED", detail=reason)
+        await notify("REOPENED", task, user_ids=assignee_ids, db=db, reason=reason or "(no reason given)")
+        await db.commit()
+
+        return await self._load_task(db, task_id)
+
     async def _get_assignment(self, db: AsyncSession, task_id: int, user_id: int) -> TaskAssignment:
         result = await db.execute(
             select(TaskAssignment).where(

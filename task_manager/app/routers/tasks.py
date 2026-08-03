@@ -21,6 +21,7 @@ from app.schemas.task import (
     PaginatedTaskResponse,
     RejectSchema,
     ReassignSchema,
+    ReopenSchema,
     ReviewSchema,
     TaskCreateSchema,
     TaskUpdateSchema,
@@ -160,6 +161,16 @@ async def review_task(
     user: User = Depends(require_manager),
 ):
     return await _service.manager_review(db, task_id, user.id, body.approved, body.comment)
+
+
+@router.post("/{task_id}/reopen", response_model=TaskResponse)
+async def reopen_task(
+    task_id: int,
+    body: ReopenSchema,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_manager),
+):
+    return await _service.reopen_task(db, task_id, user.id, body.reason)
 
 
 @router.post("/{task_id}/comments", response_model=CommentResponse, status_code=201)

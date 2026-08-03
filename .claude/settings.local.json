@@ -5,7 +5,16 @@
       "Bash(curl -k -s \"https://192.168.5.47/api/v1/tickets/2364284\" \\\\\n  -H \"Authorization: Token token=uQFKM3CTcmzH0hMguJGNJ6r9fldqbClWyt-KkIUyAWtjhiPuh_z-aGQ823SJrRNg\")",
       "Bash(powershell -Command \"\\(Get-WmiObject Win32_Process -Filter 'ProcessId=18676'\\).ExecutablePath; \\(Get-WmiObject Win32_Process -Filter 'ProcessId=18676' | Select-Object @{n='WorkingDir';e={$_.GetOwner\\(\\).User}}\\).WorkingDir\" 2>&1)",
       "mcp__dbeaver__execute_query",
-      "Bash(cd \"D:\\\\Ethereal\\\\Task Tracker\\\\frontend\" && npm run build 2>&1 | tail -20)"
+      "Bash(cd \"D:\\\\Ethereal\\\\Task Tracker\\\\frontend\" && npm run build 2>&1 | tail -20)",
+      "Bash(curl -s -m 15 -o /dev/null -w \"health:%{http_code}\\\\n\" http://192.168.2.69/health)",
+      "Bash(curl -s -m 15 -X POST http://192.168.2.69/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@etherealinformatics.com\",\"password\":\"sipl123\"}' -w \"\\\\nlogin_status:%{http_code}\\\\n\")",
+      "Bash(curl -s -m 15 http://192.168.2.69/)",
+      "Bash(curl -s -m 30 http://192.168.2.69/assets/index-yrP9YIpr.js -o /tmp/prodbundle.js)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -m 15 -D - -o /dev/null http://192.168.2.69/)",
+      "Bash(curl -s -m 15 -D - -o /dev/null http://192.168.2.69/assets/TaskDetail-CLJLwecs.js)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app/services/task_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/routers/tasks.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/schemas/task.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/services/notification_service.py'\\).read\\(\\)\\); print\\('ok'\\)\")"
     ]
   }
 }

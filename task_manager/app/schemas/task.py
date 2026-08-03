@@ -38,6 +38,10 @@ class ReviewSchema(BaseModel):
     comment: Optional[str] = None
 
 
+class ReopenSchema(BaseModel):
+    reason: Optional[str] = None
+
+
 class CommentSchema(BaseModel):
     content: str
 
