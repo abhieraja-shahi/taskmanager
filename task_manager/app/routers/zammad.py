@@ -211,9 +211,14 @@ async def post_ticket_note(
     )
 
 
+class ResolveTicketRequest(BaseModel):
+    pending_time: Optional[str] = None
+
+
 @router.patch("/tickets/{ticket_id}/resolve", response_model=ZammadTicketResponse)
 async def resolve_zammad_ticket(
     ticket_id: int,
+    body: ResolveTicketRequest = ResolveTicketRequest(),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
@@ -227,10 +232,14 @@ async def resolve_zammad_ticket(
     if not settings.ZAMMAD_BASE_URL or not settings.ZAMMAD_API_TOKEN:
         raise HTTPException(status_code=503, detail="Zammad integration not configured")
 
+    payload = {"state": "Resolved"}
+    if body.pending_time:
+        payload["pending_time"] = body.pending_time
+
     async with httpx.AsyncClient(follow_redirects=True, verify=False) as client:
         response = await client.put(
             f"{settings.ZAMMAD_BASE_URL}/api/v1/tickets/{ticket_id}",
-            json={"state": "Closed"},
+            json=payload,
             headers={"Authorization": f"Token token={settings.ZAMMAD_API_TOKEN}"},
             timeout=10.0,
         )
@@ -241,7 +250,7 @@ async def resolve_zammad_ticket(
             detail=f"Zammad API error: {response.status_code} {response.text[:200]}",
         )
 
-    ticket.state = "Closed"
+    ticket.state = "Resolved"
     ticket.resolved_by_id = current_user.id
     ticket.resolved_at = datetime.now(timezone.utc)
     await db.commit()

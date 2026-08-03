@@ -337,12 +337,25 @@ export default function ZammadTickets() {
 
   const handleResolve = async (e, ticketId) => {
     e.stopPropagation()
-    if (!window.confirm('Mark this ticket as closed in Zammad?')) return
+    const pendingInput = window.prompt('Pending time (YYYY-MM-DD HH:MM), or leave blank for none:')
+    if (pendingInput === null) return
+
+    let pendingTime = null
+    if (pendingInput.trim()) {
+      const parsed = new Date(pendingInput.trim())
+      if (Number.isNaN(parsed.getTime())) {
+        alert('Invalid date/time format.')
+        return
+      }
+      pendingTime = parsed.toISOString()
+    }
+
+    if (!window.confirm('Mark this ticket as resolved in Zammad?')) return
     setResolving(ticketId)
     try {
-      await resolveZammadTicket(ticketId)
+      await resolveZammadTicket(ticketId, pendingTime)
       setTickets((prev) =>
-        prev.map((t) => t.ticket_id === ticketId ? { ...t, state: 'Closed' } : t)
+        prev.map((t) => t.ticket_id === ticketId ? { ...t, state: 'Resolved' } : t)
       )
     } catch (err) {
       alert(err?.response?.data?.detail || 'Failed to resolve ticket.')
@@ -481,7 +494,7 @@ export default function ZammadTickets() {
                             disabled={resolving === t.ticket_id}
                             onClick={(e) => handleResolve(e, t.ticket_id)}
                           >
-                            {resolving === t.ticket_id ? '…' : 'Close'}
+                            {resolving === t.ticket_id ? '…' : 'Resolve'}
                           </button>
                         )}
                       </div>
