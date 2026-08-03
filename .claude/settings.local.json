@@ -16,7 +16,8 @@
       "Bash(echo \"exit:$?\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('app/services/task_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/routers/tasks.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/schemas/task.py'\\).read\\(\\)\\); ast.parse\\(open\\('app/services/notification_service.py'\\).read\\(\\)\\); print\\('ok'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('app/routers/zammad.py', encoding='utf-8'\\).read\\(\\)\\)\")",
-      "mcp__zammad__zammad_list_ticket_states"
+      "mcp__zammad__zammad_list_ticket_states",
+      "Bash(git push *)"
     ]
   }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getZammadTickets, locateZammadTicket, getTicketTasks, getTicketArticles, resolveZammadTicket, postTicketNote } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
+import Modal from '../components/Modal'
 
 const PRIORITY_COLORS = {
   '1 low':      'var(--text-muted)',
@@ -256,6 +257,12 @@ function LinkedTasks({ ticketId, ticketNumber }) {
 const RESOLVED_STATES = new Set(['resolved', 'closed'])
 const PAGE_SIZE = 20
 
+// Formats a Date as the value a <input type="datetime-local"> expects, in local time.
+const toDatetimeLocalValue = (date) => {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export default function ZammadTickets() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -270,6 +277,7 @@ export default function ZammadTickets() {
   const [search, setSearch]           = useState('')
   const [expanded, setExpanded]       = useState(null)
   const [resolving, setResolving]     = useState(null)
+  const [resolveModal, setResolveModal] = useState(null) // { ticketId, pendingValue }
   const debounceRef                   = useRef(null)
   const expandTicketId                = location.state?.expandTicketId ?? null
   const [locating, setLocating]       = useState(!!expandTicketId)
@@ -335,22 +343,21 @@ export default function ZammadTickets() {
 
   const toggleExpand = (id) => setExpanded((prev) => (prev === id ? null : id))
 
-  const handleResolve = async (e, ticketId) => {
+  const handleResolve = (e, ticketId) => {
     e.stopPropagation()
-    const pendingInput = window.prompt('Pending time (YYYY-MM-DD HH:MM), or leave blank for none:')
-    if (pendingInput === null) return
+    const defaultPending = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // +2 days
+    setResolveModal({ ticketId, pendingValue: toDatetimeLocalValue(defaultPending) })
+  }
 
-    let pendingTime = null
-    if (pendingInput.trim()) {
-      const parsed = new Date(pendingInput.trim())
-      if (Number.isNaN(parsed.getTime())) {
-        alert('Invalid date/time format.')
-        return
-      }
-      pendingTime = parsed.toISOString()
-    }
+  const applyQuickPending = (hours) => {
+    setResolveModal((m) => m && ({ ...m, pendingValue: toDatetimeLocalValue(new Date(Date.now() + hours * 60 * 60 * 1000)) }))
+  }
 
-    if (!window.confirm('Mark this ticket as resolved in Zammad?')) return
+  const confirmResolve = async () => {
+    if (!resolveModal) return
+    const { ticketId, pendingValue } = resolveModal
+    const pendingTime = pendingValue ? new Date(pendingValue).toISOString() : null
+    setResolveModal(null)
     setResolving(ticketId)
     try {
       await resolveZammadTicket(ticketId, pendingTime)
@@ -576,6 +583,31 @@ export default function ZammadTickets() {
             »
           </button>
         </div>
+      )}
+
+      {resolveModal && (
+        <Modal title="Resolve Ticket" onClose={() => setResolveModal(null)}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+            Set a pending time (when Zammad should follow up), or clear it for none.
+          </div>
+          <input
+            type="datetime-local"
+            className="input"
+            value={resolveModal.pendingValue}
+            onChange={(e) => setResolveModal((m) => ({ ...m, pendingValue: e.target.value }))}
+            style={{ width: '100%', marginBottom: 12 }}
+          />
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px', height: 'auto' }} onClick={() => applyQuickPending(24)}>+1 day</button>
+            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px', height: 'auto' }} onClick={() => applyQuickPending(48)}>+2 days</button>
+            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px', height: 'auto' }} onClick={() => applyQuickPending(24 * 7)}>+1 week</button>
+            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px', height: 'auto' }} onClick={() => setResolveModal((m) => ({ ...m, pendingValue: '' }))}>None</button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button className="btn btn-secondary" onClick={() => setResolveModal(null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={confirmResolve}>Resolve</button>
+          </div>
+        </Modal>
       )}
     </>
   )
